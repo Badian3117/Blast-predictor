@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlastPredMali.ml - Blast Outcome Predictor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCkUOdZ5y7hMm0yrcCQoCvLwzdM6M8s5qk&callback=initMap" async defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 30, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(58, 123, 213, 0.5);
+        }
+        
+        header {
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .logo i {
+            font-size: 2.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 18px;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 10px auto;
+            color: rgba(255, 255, 255, 0.95);
+        }
+        
+        .domain {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 20px;
+            border-radius: 30px;
+            display: inline-block;
+            margin-top: 15px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tabs {
+            display: flex;
+            background: rgba(0, 30, 60, 0.9);
+            border-bottom: 3px solid #3a7bd5;
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 18px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .tab:hover {
+            background: rgba(58, 123, 213, 0.4);
+            color: white;
+        }
+        
+        .tab.active {
+            background: rgba(58, 123, 213, 0.6);
+            border-bottom: 3px solid #00d2ff;
+            color: white;
+        }
+        
+        .tab i {
+            margin-right: 8px;
+            font-size: 1.3rem;
+        }
+        
+        .tab-content {
+            padding: 30px;
+            display: none;
+            min-height: 500px;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            color: #00d2ff;
+            text-align: center;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #3a7bd5;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .input-group {
+            background: rgba(0, 40, 80, 0.6);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.4s ease;
+            border: 1px solid rgba(58, 123, 213, 0.4);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-group:hover {
+            transform: translateY(-7px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+            border-color: #00d2ff;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #00d2ff;
+            font-size: 1.15rem;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .input-wrapper input {
+            width: 100%;
+            padding: 16px 20px 16px 55px;
+            font-size: 1.15rem;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #3a7bd5;
+            border-radius: 12px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #00d2ff;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+        }
+        
+        .input-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+            color: #00d2ff;
+        }
+        
+        .calculate-btn {
+            display: block;
+            width: 100%;
+            max-width: 450px;
+            margin: 30px auto;
+            padding: 18px;
+            background: linear-gradient(to right, #3a7bd5, #00d2ff);
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            letter-spacing: 1px;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to right, #2a6bc5, #00c2ef);
+        }
+        
+        .calculate-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 35px;
+        }
+        
+        .result-card {
+            background: rgba(0, 40, 80, 0.6);
+            border-radius: 18px;
+            padding: 30px 25px;
+            text-align: center;
+            transition: all 0.4s ease;
+            border: 1px solid rgba(58, 123, 213, 0.4);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .result-card:hover {
+            transform: translateY(-7px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            border-color: #00d2ff;
+        }
+        
+        .result-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: #00d2ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        .result-value {
+            font-size: 3.2rem;
+            font-weight: 800;
+            margin: 25px 0;
+            color: white;
+            text-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        }
+        
+        .result-unit {
+            font-size: 1.3rem;
+            color: #aaa;
+            margin-bottom: 25px;
+        }
+        
+        .progress-container {
+            background: rgba(0, 20, 40, 0.8);
+            height: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 25px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 12px;
+        }
+        
+        .safe {
+            background: linear-gradient(to right, #00b09b, #96c93d);
+        }
+        
+        .warning {
+            background: linear-gradient(to right, #f7971e, #ffd200);
+        }
+        
+        .danger {
+            background: linear-gradient(to right, #ff416c, #ff4b2b);
+        }
+        
+        .safety-info {
+            background: rgba(0, 40, 80, 0.6);
+            border-radius: 18px;
+            padding: 25px;
+            margin-top: 25px;
+            border-left: 5px solid #00d2ff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .safety-info h4 {
+            color: #00d2ff;
+            margin-bottom: 18px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .safety-info p {
+            line-height: 1.7;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        #map-container {
+            height: 550px;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+            margin: 30px 0;
+            border: 3px solid #3a7bd5;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .zone-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .zone-card {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(0, 40, 80, 0.6);
+            border-radius: 18px;
+            padding: 25px;
+            border-top: 6px solid;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s ease;
+        }
+        
+        .zone-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .equipment-zone {
+            border-top-color: #3a7bd5;
+        }
+        
+        .personnel-zone {
+            border-top-color: #ff4b2b;
+        }
+        
+        .zone-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .zone-card p {
+            line-height: 1.7;
+            color: #ddd;
+            font-size: 1.1rem;
+        }
+        
+        .coordinates-info {
+            background: rgba(0, 40, 80, 0.6);
+            border-radius: 18px;
+            padding: 25px;
+            margin-top: 30px;
+            text-align: center;
+            border: 2px solid #3a7bd5;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .coordinates-info h3 {
+            color: #00d2ff;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        .coordinates-display {
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: rgba(0, 20, 40, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 15px;
+            letter-spacing: 1px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 20px;
+            border-top: 1px solid rgba(58, 123, 213, 0.4);
+            color: #aaa;
+            font-size: 1rem;
+            background: rgba(0, 20, 40, 0.6);
+        }
+        
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .section-title {
+                font-size: 1.6rem;
+            }
+            
+            .result-value {
+                font-size: 2.5rem;
+            }
+            
+            #map-container {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            header {
+                padding: 20px 15px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .tab-content {
+                padding: 20px 15px;
+            }
+            
+            .input-group {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-bomb"></i>
+                    <div>
+                        <h1>BLAST OUTCOME PREDICTOR</h1>
+                        <p class="subtitle">Advanced prediction tool for blast outcomes with safety exclusion zones</p>
+                    </div>
+                </div>
+                <div class="domain">blastpredmali.ml</div>
+            </div>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="parameters">
+                <i class="fas fa-sliders-h"></i> Blast Parameters
+            </div>
+            <div class="tab" data-tab="results">
+                <i class="fas fa-chart-bar"></i> Prediction Results
+            </div>
+            <div class="tab" data-tab="map">
+                <i class="fas fa-map-marked-alt"></i> Exclusion Zones
+            </div>
+        </div>
+        
+        <!-- Parameters Tab -->
+        <div class="tab-content active" id="parameters-tab">
+            <h2 class="section-title">Blast Design Parameters</h2>
+            
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="burden">Burden (m)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-ruler-vertical input-icon"></i>
+                        <input type="number" id="burden" min="0" step="0.1" value="3.5">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="spacing">Spacing (m)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-ruler-horizontal input-icon"></i>
+                        <input type="number" id="spacing" min="0" step="0.1" value="4.0">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="hole-diameter">Hole Diameter (mm)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-circle input-icon"></i>
+                        <input type="number" id="hole-diameter" min="0" step="1" value="150">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="sub-drilling">Sub Drilling (m)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-arrow-down input-icon"></i>
+                        <input type="number" id="sub-drilling" min="0" step="0.1" value="0.5">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="stemming">Stemming Height (m)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-layer-group input-icon"></i>
+                        <input type="number" id="stemming" min="0" step="0.1" value="2.0">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="pf">Powder Factor (kg/m³)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-weight input-icon"></i>
+                        <input type="number" id="pf" min="0" step="0.01" value="0.45">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="x-coordinate">Centroid X Coordinate</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-map-marker-alt input-icon"></i>
+                        <input type="number" id="x-coordinate" step="any" value="144.9631">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="y-coordinate">Centroid Y Coordinate</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-map-marker-alt input-icon"></i>
+                        <input type="number" id="y-coordinate" step="any" value="-37.8136">
+                    </div>
+                </div>
+            </div>
+            
+            <button class="calculate-btn" id="calculate-btn">
+                <i class="fas fa-calculator"></i> Calculate Outcomes & Update Map
+            </button>
+            
+            <div class="safety-info">
+                <h4><i class="fas fa-exclamation-triangle"></i> Safety Information</h4>
+                <p>All personnel must be at least 500m from the blast centroid during detonation. Equipment must be positioned at least 300m away. The Z-coordinate (elevation) is fixed at 500m for all calculations.</p>
+                <p>These exclusion zones are mandatory safety requirements - no exceptions are permitted within these zones during detonation.</p>
+            </div>
+        </div>
+        
+        <!-- Results Tab -->
+        <div class="tab-content" id="results-tab">
+            <h2 class="section-title">Blast Outcome Predictions</h2>
+            
+            <div class="results-grid">
+                <div class="result-card">
+                    <h3><i class="fas fa-wave-square"></i> Vibration Prediction</h3>
+                    <div class="result-value" id="vibration-result">0.0</div>
+                    <div class="result-unit">mm/s</div>
+                    <div class="progress-container">
+                        <div class="progress-bar safe" id="vibration-progress" style="width: 20%"></div>
+                    </div>
+                    <p>Safe threshold for structures: &lt;10 mm/s</p>
+                </div>
+                
+                <div class="result-card">
+                    <h3><i class="fas fa-volume-up"></i> Noise Levels</h3>
+                    <div class="result-value" id="noise-300">0.0</div>
+                    <div class="result-unit">dB @ 300m</div>
+                    <div class="progress-container">
+                        <div class="progress-bar warning" id="noise-300-progress" style="width: 50%"></div>
+                    </div>
+                    <div class="result-value" id="noise-500">0.0</div>
+                    <div class="result-unit">dB @ 500m</div>
+                    <div class="progress-container">
+                        <div class="progress-bar safe" id="noise-500-progress" style="width: 30%"></div>
+                    </div>
+                    <p>Recommended limit: &lt;115 dB</p>
+                </div>
+                
+                <div class="result-card">
+                    <h3><i class="fas fa-cubes"></i> Fragmentation</h3>
+                    <div class="result-value" id="fragmentation-result">0.0</div>
+                    <div class="result-unit">cm (mean size)</div>
+                    <div class="progress-container">
+                        <div class="progress-bar safe" id="fragmentation-progress" style="width: 60%"></div>
+                    </div>
+                    <p>Ideal range: 10-50 cm</p>
+                </div>
+            </div>
+            
+            <div class="safety-info">
+                <h4><i class="fas fa-lightbulb"></i> Design Recommendations</h4>
+                <p>Based on your parameters, we recommend:</p>
+                <ul style="padding-left: 30px; margin-top: 15px; font-size: 1.1rem; line-height: 1.8;">
+                    <li>Maintain burden to spacing ratio between 0.8-1.2 for optimal rock fragmentation</li>
+                    <li>Adjust subdrilling to 0.8m for better floor control</li>
+                    <li>Consider increasing stemming height to 2.5m to reduce flyrock</li>
+                    <li>Monitor vibration levels closely with current explosive selection</li>
+                    <li>Perform test blasts to calibrate model predictions for local geology</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Map Tab -->
+        <div class="tab-content" id="map-tab">
+            <h2 class="section-title">Exclusion Zone Visualization</h2>
+            
+            <div class="coordinates-info">
+                <h3><i class="fas fa-map-marker-alt"></i> Blast Centroid Coordinates</h3>
+                <div class="coordinates-display">
+                    X: <span id="display-x">144.9631</span> | 
+                    Y: <span id="display-y">-37.8136</span> | 
+                    Z: 500m (fixed elevation)
+                </div>
+            </div>
+            
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+            
+            <div class="zone-info">
+                <div class="zone-card equipment-zone">
+                    <h3><i class="fas fa-hard-hat"></i> Equipment Exclusion Zone</h3>
+                    <p>All heavy machinery and equipment must be positioned at least <strong>300 meters</strong> from the blast centroid. This zone is marked in blue on the map. Equipment within this zone is at risk of damage from flying debris and shockwaves.</p>
+                </div>
+                
+                <div class="zone-card personnel-zone">
+                    <h3><i class="fas fa-user-shield"></i> Personnel Exclusion Zone</h3>
+                    <p>All personnel must maintain a minimum distance of <strong>500 meters</strong> from the blast centroid during detonation. This zone is marked in red on the map. No personnel are permitted within this zone during blast operations.</p>
+                </div>
+            </div>
+            
+            <div class="safety-info">
+                <h4><i class="fas fa-exclamation-circle"></i> Critical Safety Notes</h4>
+                <p>1. These exclusion zones are mandatory safety requirements - no exceptions are permitted.</p>
+                <p>2. Conduct a thorough safety sweep 30 minutes before detonation to ensure compliance.</p>
+                <p>3. The Z-coordinate (elevation) is fixed at 500m for all blast calculations.</p>
+                <p>4. All exclusion zones must be clearly marked with physical barriers and signage.</p>
+                <p>5. Conduct a final radio check and personnel count before initiating blast sequence.</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>BlastPredMali.ml &copy; 2023 | Advanced Blast Outcome Prediction System</p>
+            <p>This tool provides scientific estimates - always follow site-specific safety protocols and regulations</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Global variables for map elements
+        let map;
+        let blastMarker;
+        let equipmentCircle;
+        let personnelCircle;
+        
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                
+                // Show corresponding content
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+                
+                // Initialize map when map tab is opened
+                if (tabId === 'map') {
+                    setTimeout(initMap, 300);
+                }
+            });
+        });
+        
+        // Initialize Google Map
+        function initMap() {
+            // Get coordinates from input fields
+            const xCoord = parseFloat(document.getElementById('x-coordinate').value) || 144.9631;
+            const yCoord = parseFloat(document.getElementById('y-coordinate').value) || -37.8136;
+            
+            // Update display coordinates
+            document.getElementById('display-x').textContent = xCoord;
+            document.getElementById('display-y').textContent = yCoord;
+            
+            const blastCenter = { lat: yCoord, lng: xCoord };
+            
+            // Create map centered on blast centroid
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 15,
+                center: blastCenter,
+                mapTypeId: 'hybrid',
+                styles: [
+                    {
+                        featureType: "all",
+                        elementType: "labels",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "geometry",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "administrative",
+                        elementType: "geometry",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "poi",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "transit",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "geometry",
+                        stylers: [{ color: "#1a2a6c" }]
+                    }
+                ]
+            });
+            
+            // Clear existing circles and marker if they exist
+            if (blastMarker) blastMarker.setMap(null);
+            if (equipmentCircle) equipmentCircle.setMap(null);
+            if (personnelCircle) personnelCircle.setMap(null);
+            
+            // Add marker at centroid
+            blastMarker = new google.maps.Marker({
+                position: blastCenter,
+                map: map,
+                title: 'Blast Centroid',
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 12,
+                    fillColor: "#FF0000",
+                    fillOpacity: 1,
+                    strokeColor: "#FFFFFF",
+                    strokeWeight: 3
+                },
+                animation: google.maps.Animation.DROP
+            });
+            
+            // Create equipment exclusion zone (300m) - Blue
+            equipmentCircle = new google.maps.Circle({
+                strokeColor: "#3a7bd5",
+                strokeOpacity: 0.9,
+                strokeWeight: 3,
+                fillColor: "#3a7bd5",
+                fillOpacity: 0.2,
+                map: map,
+                center: blastCenter,
+                radius: 300 // 300 meters
+            });
+            
+            // Create personnel exclusion zone (500m) - Red
+            personnelCircle = new google.maps.Circle({
+                strokeColor: "#FF0000",
+                strokeOpacity: 0.9,
+                strokeWeight: 3,
+                fillColor: "#FF0000",
+                fillOpacity: 0.15,
+                map: map,
+                center: blastCenter,
+                radius: 500 // 500 meters
+            });
+            
+            // Add info window to marker
+            const infoWindow = new google.maps.InfoWindow({
+                content: `<div style="color: #333; font-weight: bold; min-width: 250px; padding: 10px;">
+                    <div style="color: #ff0000; font-size: 18px; margin-bottom: 8px; text-align: center;">BLAST CENTROID</div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 5px 0;">
+                        <span>X Coordinate:</span>
+                        <span style="font-weight: 700;">${xCoord.toFixed(4)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 5px 0;">
+                        <span>Y Coordinate:</span>
+                        <span style="font-weight: 700;">${yCoord.toFixed(4)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 5px 0;">
+                        <span>Elevation (Z):</span>
+                        <span style="font-weight: 700;">500m</span>
+                    </div>
+                </div>`
+            });
+            
+            blastMarker.addListener('click', () => {
+                infoWindow.open(map, blastMarker);
+            });
+            
+            // Open info window by default
+            infoWindow.open(map, blastMarker);
+        }
+        
+        // Calculate blast outcomes
+        function calculateResults() {
+            // Get input values
+            const burden = parseFloat(document.getElementById('burden').value) || 3.5;
+            const spacing = parseFloat(document.getElementById('spacing').value) || 4.0;
+            const holeDiameter = parseFloat(document.getElementById('hole-diameter').value) || 150;
+            const subDrilling = parseFloat(document.getElementById('sub-drilling').value) || 0.5;
+            const stemming = parseFloat(document.getElementById('stemming').value) || 2.0;
+            const pf = parseFloat(document.getElementById('pf').value) || 0.45;
+            
+            // Calculate ratios and parameters
+            const bsRatio = (burden / spacing).toFixed(2);
+            
+            // Predict vibration (simplified Kuz-Ram model)
+            const vibration = (1400 * Math.pow(pf, 1.6)).toFixed(1);
+            
+            // Update vibration progress bar
+            const vibrationProgress = Math.min(100, (vibration / 15) * 100);
+            document.getElementById('vibration-progress').style.width = vibrationProgress + '%';
+            document.getElementById('vibration-result').textContent = vibration;
+            
+            // Update vibration progress color
+            if (vibration > 10) {
+                document.getElementById('vibration-progress').className = 'progress-bar danger';
+            } else if (vibration > 5) {
+                document.getElementById('vibration-progress').className = 'progress-bar warning';
+            } else {
+                document.getElementById('vibration-progress').className = 'progress-bar safe';
+            }
+            
+            // Predict noise levels at different distances
+            const baseNoise = 165 * Math.log10(pf * 10);
+            const noise300 = (baseNoise - 20 * Math.log10(300)).toFixed(1);
+            const noise500 = (baseNoise - 20 * Math.log10(500)).toFixed(1);
+            
+            document.getElementById('noise-300').textContent = noise300;
+            document.getElementById('noise-500').textContent = noise500;
+            
+            // Update noise progress bars
+            const noise300Progress = Math.min(100, (noise300 / 140) * 100);
+            const noise500Progress = Math.min(100, (noise500 / 140) * 100);
+            
+            document.getElementById('noise-300-progress').style.width = noise300Progress + '%';
+            document.getElementById('noise-500-progress').style.width = noise500Progress + '%';
+            
+            // Update noise progress colors
+            document.getElementById('noise-300-progress').className = noise300 > 115 ? 
+                'progress-bar danger' : noise300 > 100 ? 
+                'progress-bar warning' : 'progress-bar safe';
+                
+            document.getElementById('noise-500-progress').className = noise500 > 115 ? 
+                'progress-bar danger' : noise500 > 100 ? 
+                'progress-bar warning' : 'progress-bar safe';
+            
+            // Predict fragmentation (Kuznetsov formula simplified)
+            const fragmentation = (0.8 * Math.pow(burden * spacing * pf, 0.33) * 100).toFixed(1);
+            document.getElementById('fragmentation-result').textContent = fragmentation;
+            
+            // Update fragmentation progress
+            const fragProgress = fragmentation > 50 ? 
+                Math.max(0, 100 - ((fragmentation - 50) * 2)) : 
+                Math.min(100, fragmentation * 2);
+                
+            document.getElementById('fragmentation-progress').style.width = fragProgress + '%';
+            document.getElementById('fragmentation-progress').className = fragmentation > 50 ? 
+                'progress-bar danger' : fragmentation < 10 ? 
+                'progress-bar warning' : 'progress-bar safe';
+            
+            // Switch to results tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            document.querySelector('.tab[data-tab="results"]').classList.add('active');
+            document.getElementById('results-tab').classList.add('active');
+            
+            // Initialize map with current coordinates
+            initMap();
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up calculate button
+            document.getElementById('calculate-btn').addEventListener('click', calculateResults);
+            
+            // Initialize map
+            setTimeout(initMap, 500);
+            
+            // Perform initial calculation
+            calculateResults();
+        });
+    </script>
+</body>
+</html>
