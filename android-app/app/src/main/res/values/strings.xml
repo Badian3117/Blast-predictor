@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BP Guardian</string>
+    <string name="infowear_accessibility_description">Reads blood pressure and pulse values off the screen of the watch companion app you name in BP Guardian\'s Settings, so they can be combined with your other readings. Only inspects the single app you configure.</string>
+</resources>
