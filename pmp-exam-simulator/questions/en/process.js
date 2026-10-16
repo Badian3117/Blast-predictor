@@ -24,7 +24,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR005', d: 'Process', ap: 'Predictive',
   q: 'A project manager wants to make sure that every requirement is linked to a business objective and to the deliverables and tests that satisfy it. Which tool should be used?',
-  o: ['Requirements traceability matrix', 'Stakeholder register', 'WBS dictionary', 'Issue log'],
+  o: ["Requirements traceability matrix",
+      "Stakeholder register and engagement plan",
+      "WBS dictionary for each work package",
+      "Issue log with links to requirements"],
   c: 0, e: 'The requirements traceability matrix links requirements to their origin (business needs, objectives) and traces them through design, deliverables and tests.' },
 
 { id: 'PR006', d: 'Process', ap: 'Agile',
@@ -58,10 +61,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR010', d: 'Process', ap: 'Agile',
   q: 'What is the difference between acceptance criteria and the Definition of Done?',
-  o: ['They are the same thing',
-      'Acceptance criteria are specific to an individual story; the Definition of Done applies to all work items',
-      'The Definition of Done is written by the customer; acceptance criteria are written by testers',
-      'Acceptance criteria apply to the release; the Definition of Done applies to a sprint'],
+  o: ["They are the same thing, written by different people for different audiences",
+      "Acceptance criteria are specific to an individual story; the Definition of Done applies to all work items",
+      "The Definition of Done is written by the customer; acceptance criteria are written by the testers on the team",
+      "Acceptance criteria apply to the whole release; the Definition of Done applies only to a single sprint"],
   c: 1, e: 'Acceptance criteria describe the conditions a particular story must meet. The Definition of Done is a shared checklist of quality criteria applying to every increment.' },
 
 { id: 'PR011', d: 'Process', ap: 'Agile',
@@ -94,10 +97,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR015', d: 'Process', ap: 'Predictive',
   q: 'What is the difference between total float and free float?',
-  o: ['They are the same',
-      'Total float is the delay possible without delaying the project finish; free float is the delay possible without delaying the early start of any successor',
-      'Free float is the delay possible without delaying the project finish; total float is the delay possible without delaying any successor',
-      'Total float applies only to critical activities'],
+  o: ["They are the same measure, expressed in different units",
+      "Total float protects the project finish; free float protects the early start of successors",
+      "Free float protects the project finish; total float protects the early start of successors",
+      "Total float applies only to critical activities; free float only to non-critical ones"],
   c: 1, e: 'Total float protects the project end date (or a constraint). Free float protects the early start of immediate successors. Free float is always less than or equal to total float.' },
 
 { id: 'PR016', d: 'Process', ap: 'Predictive',
@@ -172,10 +175,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR027', d: 'Process', ap: 'Agile',
   q: 'What is the difference between lead time and cycle time?',
-  o: ["They are the same measure, expressed from different perspectives",
+  o: ["They are the same measure, expressed from the customer\u2019s and the team\u2019s perspectives",
       "Lead time runs from request to delivery; cycle time from start of work to finish",
-      "Cycle time includes queue time before work starts; lead time does not",
-      "Lead time measures planning work; cycle time measures development work"],
+      "Cycle time includes the queue time before work starts; lead time does not include it",
+      "Lead time measures the planning work; cycle time measures only the development work"],
   c: 1, e: 'Lead time is the customer’s view (request to delivery). Cycle time is the team’s view (start to finish). Lead time includes queue time before work begins.' },
 
 { id: 'PR028', d: 'Process', ap: 'Predictive',
@@ -327,10 +330,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR053', d: 'Process', ap: 'Predictive',
   q: 'What is the main purpose of a bidder conference?',
-  o: ["To negotiate the final price and terms with the preferred seller",
+  o: ["To negotiate the final price and contract terms with the preferred seller",
       "To ensure all prospective sellers share the same understanding of the procurement",
-      "To evaluate the sellers\u2019 proposals and select the winning bid",
-      "To review the sellers\u2019 past performance before the contract is awarded"],
+      "To evaluate the sellers\u2019 proposals against the criteria and select the winning bid",
+      "To review the sellers\u2019 past performance records before the contract is awarded"],
   c: 1, e: 'Bidder conferences give all prospective sellers the same information and the opportunity to ask questions, ensuring fairness.' },
 
 { id: 'PR054', d: 'Process', ap: 'Predictive',
@@ -367,10 +370,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR058', d: 'Process', ap: 'Hybrid',
   q: 'When choosing a development approach, which factor most strongly suggests an adaptive (agile) approach?',
-  o: ['Requirements are stable and well-defined',
-      'High uncertainty in requirements and a need for frequent customer feedback',
-      'Strict regulatory documentation at each phase gate',
-      'The deliverable can only be used once it is fully complete'],
+  o: ["Requirements are stable, well-defined and approved early",
+      "High requirements uncertainty and a need for frequent feedback",
+      "Strict regulatory documentation is required at each phase gate",
+      "The deliverable can only be used once it is fully complete"],
   c: 1, e: 'High requirements uncertainty, high rate of change and the ability to deliver usable increments favor adaptive approaches.' },
 
 { id: 'PR059', d: 'Process', ap: 'Agile',
@@ -384,16 +387,16 @@ Array.prototype.push.apply(window.PMP_BANK, [
 { id: 'PR060', d: 'Process', ap: 'Agile',
   q: 'What is the main purpose of the daily standup (daily scrum)?',
   o: ["To report progress to the scrum master and the product owner",
-      "For developers to inspect progress toward the sprint goal and adapt the plan",
+      "To inspect progress toward the sprint goal and adapt the plan",
       "To identify and solve technical problems as a whole team",
       "To update the product backlog with new items from the team"],
   c: 1, e: 'The daily scrum is a short planning and synchronization event for the developers, not a status report to management.' },
 
 { id: 'PR061', d: 'Process', ap: 'Agile',
   q: 'What is the difference between the sprint review and the sprint retrospective?',
-  o: ["The review inspects team processes; the retrospective inspects the increment",
+  o: ["The review inspects team processes and tools; the retrospective inspects the product increment",
       "The review inspects the increment with stakeholders; the retrospective inspects how the team worked",
-      "The review is for the team only; the retrospective also includes stakeholders",
+      "The review is for the team only; the retrospective also includes stakeholders and the sponsor",
       "The review happens every sprint; the retrospective happens only at the end of a release"],
   c: 1, e: 'Sprint review: what was built, with feedback from stakeholders, and adapting the backlog. Retrospective: how the team worked (people, processes, tools) and what to improve.' },
 
@@ -586,10 +589,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR090', d: 'Process', ap: 'Predictive',
   q: 'A project manager is creating a quality management plan. Which approach to setting quality standards is best?',
-  o: ["Reuse the quality standards from the last similar project to save time",
+  o: ["Reuse the quality standards from the last similar project to save planning time",
       "Identify the applicable quality requirements and standards and how compliance will be shown",
-      "Let the team define the standards during execution as the work becomes clearer",
-      "Define the standards after the first inspection results show where defects occur"],
+      "Let the team define the quality standards during execution as the work becomes clearer",
+      "Define the standards after the first inspection results show where the defects occur"],
   c: 1, e: 'Plan Quality Management identifies quality requirements and standards (organizational, regulatory, customer) and how the project will demonstrate compliance.' },
 
 { id: 'PR091', d: 'Process', ap: 'Hybrid',
@@ -660,10 +663,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PR101', d: 'Process', ap: 'Agile',
   q: 'Which characteristics describe a well-maintained product backlog (DEEP)?',
-  o: ['Detailed, Estimated, Engineered, Prioritized',
-      'Detailed appropriately, Estimated, Emergent, Prioritized',
-      'Documented, Exhaustive, Estimated, Planned',
-      'Defined, Efficient, Emergent, Planned'],
+  o: ["Detailed, Estimated, Engineered, Prioritized",
+      "Detailed appropriately, Estimated, Emergent, Prioritized",
+      "Documented, Exhaustive, Estimated, Planned in full",
+      "Defined, Efficient, Emergent, Planned by release"],
   c: 1, e: 'DEEP: items near the top are detailed appropriately, items are estimated, the backlog is emergent (it evolves), and it is prioritized (ordered).' },
 
 { id: 'PR102', d: 'Process', ap: 'Agile',

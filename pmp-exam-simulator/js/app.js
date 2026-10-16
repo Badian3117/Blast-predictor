@@ -1,5 +1,5 @@
 /* PMP Practice Exam Simulator - exam engine
- * Question schema (see questions/*.js):
+ * Question schema (see questions/en/*.js):
  *   id  unique id            d  'People' | 'Process' | 'Business'
  *   ap  'Predictive' | 'Agile' | 'Hybrid'
  *   t   'single' (default) | 'multi' | 'match' | 'numeric'
@@ -8,34 +8,30 @@
  *   c   correct: index | [indices] | [right index per left item] | number
  *   tol numeric tolerance (numeric only, default 0)
  *   e   explanation
+ *   fixedOrder  keep option order (e.g. options that reference a table in order)
+ * Translations (questions/fr/*.js): window.PMP_FR[id] = { q, o, m, e } with the same option order.
  */
 (function () {
   'use strict';
 
   var BANK = window.PMP_BANK || [];
+  var FR = window.PMP_FR || {};
+  var I18N = window.PMP_I18N;
 
   // July 2026 PMP Examination Content Outline weights.
-  var DOMAINS = {
-    People: { w: 0.33, label: 'People' },
-    Process: { w: 0.41, label: 'Process' },
-    Business: { w: 0.26, label: 'Business Environment' }
-  };
+  var DOMAINS = { People: 0.33, Process: 0.41, Business: 0.26 };
   var DOMAIN_KEYS = ['People', 'Process', 'Business'];
+  var APPROACHES = ['Predictive', 'Agile', 'Hybrid'];
   // Real exam: 180 questions / 240 minutes => 80 seconds per question.
   var SECONDS_PER_Q = 240 * 60 / 180;
-  var MODES = {
-    full: { n: 180, label: 'Full exam (180 Q)' },
-    half: { n: 90, label: 'Half exam (90 Q)' },
-    quick: { n: 60, label: 'Section drill (60 Q)' },
-    sprint: { n: 30, label: 'Quick practice (30 Q)' }
-  };
+  var MODES = { full: 180, half: 90, quick: 60, sprint: 30 };
   var PREDICTIVE_SHARE = 0.4;
   var SECTION_SIZE = 60;
   var BREAK_SECONDS = 10 * 60;
   var STORE_KEY = 'pmpSim.v1';
   var LETTERS = 'ABCDEFGHIJ';
 
-  // ---------- persistence (history + last-seen timestamps only; an exam never resumes) ----------
+  // ---------- persistence (history, last-seen timestamps, language; an exam never resumes) ----------
   function loadStore() {
     try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; }
   }
@@ -45,6 +41,56 @@
   var store = loadStore();
   store.seen = store.seen || {};
   store.history = store.history || [];
+
+  // ---------- language ----------
+  var lang = store.lang || ((navigator.language || '').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en');
+  if (!I18N[lang]) lang = 'en';
+
+  function t(key, vars) {
+    var s = I18N[lang][key];
+    if (s == null) s = I18N.en[key];
+    if (s == null) return key;
+    if (vars && typeof s === 'string') {
+      s = s.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? vars[k] : m; });
+    }
+    return s;
+  }
+  // Localized text of a question; falls back to English if a translation is missing.
+  function L(q) {
+    var tr = lang === 'fr' ? FR[q.id] : null;
+    return {
+      q: (tr && tr.q) || q.q,
+      o: (tr && tr.o) || q.o,
+      m: (tr && tr.m) || q.m,
+      e: (tr && tr.e) || q.e
+    };
+  }
+  function domLabel(d) { return t('dom.' + d); }
+  function locale() { return lang === 'fr' ? 'fr-FR' : 'en-US'; }
+
+  function applyStatic() {
+    document.documentElement.lang = lang;
+    $all('[data-i18n]').forEach(function (n) { n.textContent = t(n.getAttribute('data-i18n')); });
+    $all('[data-i18n-html]').forEach(function (n) { n.innerHTML = t(n.getAttribute('data-i18n-html')); });
+    $all('[data-i18n-ph]').forEach(function (n) { n.placeholder = t(n.getAttribute('data-i18n-ph')); });
+    $all('[data-i18n-title]').forEach(function (n) { n.title = t(n.getAttribute('data-i18n-title')); });
+    $all('.lang-switch button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-lang') === lang ? 'true' : 'false'); });
+  }
+
+  function setLang(l) {
+    if (!I18N[l] || l === lang) return;
+    lang = l;
+    store.lang = l;
+    saveStore();
+    applyStatic();
+    renderWelcome();
+    if (!ex) return;
+    if (isActive('screen-exam')) render();
+    else if (isActive('screen-review')) openReview();
+    else if (isActive('screen-break')) renderBreakText();
+    else if (isActive('screen-results') && ex.result) renderResults(ex.result);
+    if (!ex.finished) updateClockLabels();
+  }
 
   // ---------- randomness ----------
   function rnd(n) {
@@ -58,7 +104,7 @@
   function shuffle(arr) {
     for (var i = arr.length - 1; i > 0; i--) {
       var j = rnd(i + 1);
-      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
     }
     return arr;
   }
@@ -70,14 +116,32 @@
     return s.sort(function (a, b) { return (store.seen[a.id] || 0) - (store.seen[b.id] || 0); });
   }
 
-  // Take k items from a freshness-ordered pool, aiming for the exam's ~40% predictive / ~60% agile+hybrid mix.
+  // Take k items from a freshness-ordered pool. Freshness wins: questions are taken tier by tier
+  // (never seen first, then by last-seen time), and the ~40% predictive / ~60% agile+hybrid mix is
+  // only balanced inside the tier that has more questions than are still needed.
   function takeBalanced(pool, k) {
-    var pred = pool.filter(function (q) { return q.ap === 'Predictive'; });
-    var adapt = pool.filter(function (q) { return q.ap !== 'Predictive'; });
-    var na = Math.min(adapt.length, k - Math.min(pred.length, Math.round(k * PREDICTIVE_SHARE)));
-    var np = Math.min(pred.length, k - na);
-    var taken = pred.slice(0, np).concat(adapt.slice(0, na));
-    return [taken, pred.slice(np).concat(adapt.slice(na))];
+    var targetP = Math.round(k * PREDICTIVE_SHARE);
+    var taken = [], rest = [], np = 0, na = 0, i = 0;
+    var isP = function (q) { return q.ap === 'Predictive'; };
+    while (i < pool.length) {
+      var stamp = store.seen[pool[i].id] || 0, tier = [];
+      while (i < pool.length && (store.seen[pool[i].id] || 0) === stamp) tier.push(pool[i++]);
+      var need = k - taken.length;
+      if (need <= 0) { rest = rest.concat(tier); continue; }
+      if (tier.length <= need) {
+        tier.forEach(function (q) { if (isP(q)) np++; else na++; });
+        taken = taken.concat(tier);
+        continue;
+      }
+      var pred = tier.filter(isP), adapt = tier.filter(function (q) { return !isP(q); });
+      var tp = Math.min(pred.length, Math.max(0, targetP - np), need);
+      var ta = Math.min(adapt.length, need - tp);
+      tp = Math.min(pred.length, need - ta);
+      np += tp; na += ta;
+      taken = taken.concat(pred.slice(0, tp), adapt.slice(0, ta));
+      rest = rest.concat(pred.slice(tp), adapt.slice(ta));
+    }
+    return [taken, rest];
   }
 
   function pickQuestions(n, focus) {
@@ -89,7 +153,7 @@
       quotas[focus] = n;
     } else {
       var total = 0;
-      doms.forEach(function (d) { quotas[d] = Math.round(n * DOMAINS[d].w); total += quotas[d]; });
+      doms.forEach(function (d) { quotas[d] = Math.round(n * DOMAINS[d]); total += quotas[d]; });
       quotas.Process += n - total;
     }
     var chosen = [], spare = [];
@@ -131,6 +195,7 @@
     $('#' + id).classList.add('active');
     window.scrollTo(0, 0);
   }
+  function isActive(id) { return $('#' + id).classList.contains('active'); }
   function fmtTime(sec) {
     sec = Math.max(0, Math.round(sec));
     var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
@@ -160,6 +225,16 @@
   // ---------- question helpers ----------
   function qType(q) { return q.t || 'single'; }
 
+  // Accepts "1,234.5", "1 234,5", "0,8", "$250,000", "-10 000".
+  function parseNum(v) {
+    var s = String(v).replace(/[\s  $%€]/g, '');
+    if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) s = s.replace(/,/g, '');
+    else if (/^-?\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g, '');
+    else s = s.replace(',', '.');
+    if (!/^-?\d*\.?\d+$/.test(s)) return NaN;
+    return parseFloat(s);
+  }
+
   function isAnswered(q, a) {
     switch (qType(q)) {
       case 'single': return a != null;
@@ -169,7 +244,6 @@
     }
     return false;
   }
-  function parseNum(v) { return parseFloat(String(v).replace(/[\s,$%]/g, '')); }
 
   function isCorrect(q, a) {
     if (!isAnswered(q, a)) return false;
@@ -186,11 +260,11 @@
 
   function instructionFor(q) {
     switch (qType(q)) {
-      case 'multi': return 'Select ' + ['', 'one', 'two', 'three', 'four', 'five'][q.c.length] + '.';
-      case 'match': return 'Match each item on the left with the correct item on the right by selecting from each drop-down list.';
-      case 'numeric': return 'Type your answer in the box (numbers only).';
+      case 'multi': return t('instr.multi', { n: t('num.words')[q.c.length] });
+      case 'match': return t('instr.match');
+      case 'numeric': return t('instr.numeric');
     }
-    return 'Choose the best answer.';
+    return t('instr.single');
   }
 
   // ---------- exam state ----------
@@ -201,32 +275,31 @@
   function startExam() {
     var modeKey = ($('input[name=mode]:checked') || {}).value || 'full';
     var focus = $('#domain-focus').value || '';
-    var n = Math.min(MODES[modeKey].n, poolSize(focus));
-    if (n === 0) { modal('No questions', 'The question bank is empty.', [{ label: 'OK' }]); return; }
+    var n = Math.min(MODES[modeKey], poolSize(focus));
+    if (n === 0) { modal('', t('empty.bank'), [{ label: t('btn.ok') }]); return; }
 
     var items = pickQuestions(n, focus).map(function (q) {
       var it = { q: q };
-      var t = qType(q);
-      if (t === 'single' || t === 'multi') it.perm = q.fixedOrder ? range(q.o.length) : shuffle(range(q.o.length));
-      if (t === 'match') { it.perm = shuffle(range(q.o.length)); it.mperm = shuffle(range(q.m.length)); }
+      var ty = qType(q);
+      if (ty === 'single' || ty === 'multi') it.perm = q.fixedOrder ? range(q.o.length) : shuffle(range(q.o.length));
+      if (ty === 'match') { it.perm = shuffle(range(q.o.length)); it.mperm = shuffle(range(q.m.length)); }
       return it;
     });
     var sections = [];
     for (var i = 0; i < n; i += SECTION_SIZE) sections.push([i, Math.min(n, i + SECTION_SIZE)]);
 
     ex = {
-      name: ($('#cand-name').value || '').trim() || 'Candidate',
+      name: ($('#cand-name').value || '').trim() || (lang === 'fr' ? 'Candidat' : 'Candidate'),
       modeKey: modeKey, focus: focus, items: items, sections: sections, sec: 0, cur: 0,
       ans: items.map(function () { return null; }),
       flag: items.map(function () { return false; }),
       strike: items.map(function () { return []; }),
-      hl: items.map(function () { return null; }),
+      hl: items.map(function () { return {}; }),   // highlighted stem HTML per language
       totalSec: Math.round(n * SECONDS_PER_Q),
       remaining: Math.round(n * SECONDS_PER_Q),
       deadline: 0, timer: null, breakTimer: null, reviewList: null,
-      hlMode: false, strikeMode: false, startedAt: Date.now(), finished: false
+      hlMode: false, strikeMode: false, startedAt: Date.now(), finished: false, result: null
     };
-
     show('screen-tutorial');
   }
 
@@ -248,35 +321,31 @@
     updateClockLabels();
     if (ex.remaining <= 0) {
       clearInterval(ex.timer); ex.timer = null;
-      timeUp();
+      finishExam(true);
     }
   }
   function updateClockLabels() {
-    var t = fmtTime(ex.remaining);
-    $('#time-left').textContent = t;
-    $all('.time-left-mirror').forEach(function (s) { s.textContent = t; });
+    var s = fmtTime(ex.remaining);
+    $('#time-left').textContent = s;
+    $all('.time-left-mirror').forEach(function (n) { n.textContent = s; });
     var timer = $('#timer');
     timer.classList.toggle('low', ex.remaining <= 15 * 60 && ex.remaining > 5 * 60);
     timer.classList.toggle('critical', ex.remaining <= 5 * 60);
-  }
-  function timeUp() {
-    if (ex.finished) return;
-    finishExam(true);
   }
 
   function secRange() { return ex.sections[ex.sec]; }
 
   // ---------- rendering a question ----------
   function render() {
-    var it = ex.items[ex.cur], q = it.q, t = qType(q);
+    var it = ex.items[ex.cur], q = it.q, ty = qType(q), tx = L(q);
     var sr = secRange();
-    $('#qcount').textContent = (ex.cur + 1) + ' of ' + ex.items.length;
-    $('#section-info').textContent = 'Section ' + (ex.sec + 1) + ' of ' + ex.sections.length;
-    $('#exam-title').textContent = 'PMP Practice Examination — ' + ex.name;
+    $('#qcount').textContent = t('exam.count', { n: ex.cur + 1, total: ex.items.length });
+    $('#section-info').textContent = t('exam.section', { n: ex.sec + 1, total: ex.sections.length });
+    $('#exam-title').textContent = t('exam.title', { name: ex.name });
     $('#flag-cb').checked = ex.flag[ex.cur];
     $('.flag-tool').classList.toggle('on', ex.flag[ex.cur]);
-    $('#qmeta').textContent = 'Question ' + (ex.cur + 1);
-    $('#stem').innerHTML = ex.hl[ex.cur] || q.q;
+    $('#qmeta').textContent = t('exam.question', { n: ex.cur + 1 });
+    $('#stem').innerHTML = ex.hl[ex.cur][lang] || tx.q;
     $('#instr').textContent = instructionFor(q);
     $('#qmsg').textContent = '';
 
@@ -284,13 +353,13 @@
     box.innerHTML = '';
     var a = ex.ans[ex.cur];
 
-    if (t === 'single' || t === 'multi') {
+    if (ty === 'single' || ty === 'multi') {
       it.perm.forEach(function (oi, pos) {
-        var chosen = t === 'single' ? a === oi : !!(a && a.indexOf(oi) >= 0);
-        var input = el('input', { type: t === 'single' ? 'radio' : 'checkbox', name: 'ans', value: String(oi) });
+        var chosen = ty === 'single' ? a === oi : !!(a && a.indexOf(oi) >= 0);
+        var input = el('input', { type: ty === 'single' ? 'radio' : 'checkbox', name: 'ans', value: String(oi) });
         input.checked = chosen;
         var lab = el('label', { class: 'opt' + (chosen ? ' chosen' : '') + (ex.strike[ex.cur].indexOf(oi) >= 0 ? ' struck' : '') }, [
-          input, el('span', { class: 'letter', text: LETTERS[pos] + '.' }), el('span', { class: 'txt', text: q.o[oi] })
+          input, el('span', { class: 'letter', text: LETTERS[pos] + '.' }), el('span', { class: 'txt', text: tx.o[oi] })
         ]);
         lab.addEventListener('click', function (ev) {
           if (ex.strikeMode) { ev.preventDefault(); toggleStrike(oi); }
@@ -299,35 +368,32 @@
         input.addEventListener('change', function () { onChoice(oi, input); });
         box.appendChild(lab);
       });
-    } else if (t === 'match') {
+    } else if (ty === 'match') {
       var table = el('table', { class: 'match-table' });
       it.perm.forEach(function (li) {
-        var sel = el('select', { 'aria-label': 'Match for: ' + q.o[li] });
-        sel.appendChild(el('option', { value: '', text: '— Select —' }));
-        it.mperm.forEach(function (ri) { sel.appendChild(el('option', { value: String(ri), text: q.m[ri] })); });
+        var sel = el('select', { 'aria-label': t('match.aria', { item: tx.o[li] }), 'data-left': String(li) });
+        sel.appendChild(el('option', { value: '', text: t('match.select') }));
+        it.mperm.forEach(function (ri) { sel.appendChild(el('option', { value: String(ri), text: tx.m[ri] })); });
         if (a && a[li] != null) sel.value = String(a[li]);
         sel.addEventListener('change', function () {
           var cur = ex.ans[ex.cur] || q.o.map(function () { return null; });
           cur[li] = sel.value === '' ? null : parseInt(sel.value, 10);
           ex.ans[ex.cur] = cur;
         });
-        table.appendChild(el('tr', null, [el('td', { text: q.o[li] }), el('td', null, [sel])]));
+        table.appendChild(el('tr', null, [el('td', { text: tx.o[li] }), el('td', null, [sel])]));
       });
       box.appendChild(table);
-    } else if (t === 'numeric') {
-      var inp = el('input', { type: 'text', inputmode: 'decimal', class: 'numeric-input', 'aria-label': 'Your answer', autocomplete: 'off' });
+    } else if (ty === 'numeric') {
+      var inp = el('input', { type: 'text', inputmode: 'decimal', class: 'numeric-input', 'aria-label': t('num.aria'), autocomplete: 'off' });
       inp.value = a == null ? '' : a;
       inp.addEventListener('input', function () { ex.ans[ex.cur] = inp.value; });
       box.appendChild(inp);
     }
 
-    var inReview = ex.reviewList;
-    var atStart = inReview ? inReview.indexOf(ex.cur) <= 0 : ex.cur <= sr[0];
+    var atStart = ex.reviewList ? ex.reviewList.indexOf(ex.cur) <= 0 : ex.cur <= sr[0];
     $('#btn-prev').disabled = atStart;
-    $('#btn-next').innerHTML = 'Next &#9654;';
     $('#qarea').classList.toggle('hl-on', ex.hlMode);
     $('#qarea').classList.toggle('strike-on', ex.strikeMode);
-    $('#qarea').scrollTop = 0;
     window.scrollTo(0, 0);
   }
 
@@ -343,7 +409,7 @@
       if (input.checked && idx < 0) {
         if (cur.length >= q.c.length) {
           input.checked = false;
-          $('#qmsg').textContent = 'You may select only ' + q.c.length + ' options. Clear a selection first.';
+          $('#qmsg').textContent = t('msg.maxSel', { n: q.c.length });
           return;
         }
         cur.push(oi);
@@ -384,7 +450,7 @@
   function openReview() {
     ex.reviewList = null;
     var sr = secRange();
-    $('#review-heading').textContent = 'Section ' + (ex.sec + 1) + ' of ' + ex.sections.length + ' — Review';
+    $('#review-heading').textContent = t('rev.heading', { n: ex.sec + 1, total: ex.sections.length });
     var grid = $('#review-grid');
     grid.innerHTML = '';
     var inc = 0, fl = 0;
@@ -397,13 +463,13 @@
           class: 'rv' + (done ? '' : ' inc'), type: 'button',
           onclick: function () { ex.cur = idx; show('screen-exam'); render(); }
         }, [
-          el('span', { text: 'Question ' + (idx + 1) }),
-          el('span', { class: 'f', text: (ex.flag[idx] ? '⚑' : '') + (done ? '' : ' Incomplete') })
+          el('span', { text: t('exam.question', { n: idx + 1 }) }),
+          el('span', { class: 'f', text: (ex.flag[idx] ? '⚑' : '') + (done ? '' : ' ' + t('rev.inc')) })
         ]));
       })(i, done);
     }
-    $('#review-summary').textContent = (sr[1] - sr[0]) + ' questions · ' + inc + ' incomplete · ' + fl + ' flagged';
-    $('#btn-end-section').textContent = ex.sec === ex.sections.length - 1 ? 'End Exam' : 'End Section';
+    $('#review-summary').textContent = t('rev.summary', { n: sr[1] - sr[0], inc: inc, fl: fl });
+    $('#btn-end-section').textContent = t(ex.sec === ex.sections.length - 1 ? 'rev.endExam' : 'rev.endSection');
     show('screen-review');
   }
 
@@ -415,7 +481,7 @@
           (filter === 'flag' && ex.flag[i])) list.push(i);
     }
     if (!list.length) {
-      modal('Review', filter === 'inc' ? 'There are no incomplete questions in this section.' : 'There are no flagged questions in this section.', [{ label: 'OK', primary: true }]);
+      modal(t('rev.title'), t(filter === 'inc' ? 'rev.noInc' : 'rev.noFlag'), [{ label: t('btn.ok'), primary: true }]);
       return;
     }
     ex.reviewList = list;
@@ -428,13 +494,11 @@
     var sr = secRange(), inc = 0;
     for (var i = sr[0]; i < sr[1]; i++) if (!isAnswered(ex.items[i].q, ex.ans[i])) inc++;
     var last = ex.sec === ex.sections.length - 1;
-    var body = (inc ? '<p><strong>You have ' + inc + ' incomplete question' + (inc > 1 ? 's' : '') + ' in this section.</strong> Unanswered questions are scored as incorrect.</p>' : '') +
-      (last ? '<p>If you end the exam, you will not be able to change any answers and your exam will be scored.</p>'
-            : '<p>Once you end this section you will <strong>not</strong> be able to return to it.</p>') +
-      '<p>Do you want to ' + (last ? 'end the exam' : 'end this section') + '?</p>';
-    modal(last ? 'End Exam' : 'End Section', body, [
-      { label: 'No' },
-      { label: 'Yes', primary: true, action: endSection }
+    var body = (inc ? t('end.incomplete', { n: inc }) : '') +
+      t(last ? 'end.lastWarn' : 'end.secWarn') + t(last ? 'end.askExam' : 'end.askSection');
+    modal(t(last ? 'rev.endExam' : 'rev.endSection'), body, [
+      { label: t('btn.no') },
+      { label: t('btn.yes'), primary: true, action: endSection }
     ]);
   }
 
@@ -443,10 +507,15 @@
     pauseClock();
     ex.sec++;
     ex.reviewList = null;
-    $('#break-heading').textContent = 'Section ' + ex.sec + ' of ' + ex.sections.length + ' complete';
+    renderBreakText();
     $('#break-offer').hidden = false;
     $('#break-running').hidden = true;
     show('screen-break');
+  }
+
+  function renderBreakText() {
+    $('#break-heading').textContent = t('brk.heading', { n: ex.sec, total: ex.sections.length });
+    $('#break-offer-text').innerHTML = t('brk.offer', { time: fmtTime(ex.remaining) });
   }
 
   function takeBreak() {
@@ -477,16 +546,16 @@
     if (!ex || !ex.hlMode) return;
     var sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
-    var range = sel.getRangeAt(0), stem = $('#stem');
-    if (!stem.contains(range.commonAncestorContainer)) return;
+    var rg = sel.getRangeAt(0), stem = $('#stem');
+    if (!stem.contains(rg.commonAncestorContainer)) return;
     var mark = document.createElement('mark');
     try {
-      range.surroundContents(mark);
+      rg.surroundContents(mark);
     } catch (e) {
-      try { mark.appendChild(range.extractContents()); range.insertNode(mark); } catch (e2) { return; }
+      try { mark.appendChild(rg.extractContents()); rg.insertNode(mark); } catch (e2) { return; }
     }
     sel.removeAllRanges();
-    ex.hl[ex.cur] = stem.innerHTML;
+    ex.hl[ex.cur][lang] = stem.innerHTML;
   }
 
   function setToggle(btn, on) { btn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
@@ -564,47 +633,48 @@
     if (pct >= 50) return 1;   // Below Target
     return 0;                  // Needs Improvement
   }
-  var RATING_LABELS = ['Needs Improvement', 'Below Target', 'Target', 'Above Target'];
 
-  function answerText(q, a, perm) {
-    var t = qType(q);
-    if (!isAnsweredLoose(q, a)) return null;
-    if (t === 'single') return [q.o[a]];
-    if (t === 'multi') return sortByPerm(a, perm).map(function (i) { return q.o[i]; });
-    if (t === 'match') return perm.map(function (li) { return q.o[li] + '  →  ' + (a[li] == null ? '(no selection)' : q.m[a[li]]); });
-    if (t === 'numeric') return [String(a).trim()];
-    return null;
-  }
-  function correctText(q, perm) {
-    var t = qType(q);
-    if (t === 'single') return [q.o[q.c]];
-    if (t === 'multi') return sortByPerm(q.c, perm).map(function (i) { return q.o[i]; });
-    if (t === 'match') return perm.map(function (li) { return q.o[li] + '  →  ' + q.m[q.c[li]]; });
-    if (t === 'numeric') return [fmtNumber(q.c) + (q.tol ? ' (±' + q.tol + ' accepted)' : '')];
-    return [];
-  }
   function sortByPerm(list, perm) { return list.slice().sort(function (x, y) { return perm.indexOf(x) - perm.indexOf(y); }); }
   function isAnsweredLoose(q, a) {
-    var t = qType(q);
+    var ty = qType(q);
     if (a == null) return false;
-    if (t === 'multi') return a.length > 0;
-    if (t === 'match') return a.some(function (x) { return x != null; });
-    if (t === 'numeric') return String(a).trim() !== '';
+    if (ty === 'multi') return a.length > 0;
+    if (ty === 'match') return a.some(function (x) { return x != null; });
+    if (ty === 'numeric') return String(a).trim() !== '';
     return true;
   }
-  function fmtNumber(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 4 }); }
+  function fmtNumber(n) { return Number(n).toLocaleString(locale(), { maximumFractionDigits: 4 }); }
+
+  function answerText(q, a, it) {
+    var ty = qType(q), tx = L(q);
+    if (!isAnsweredLoose(q, a)) return null;
+    if (ty === 'single') return [tx.o[a]];
+    if (ty === 'multi') return sortByPerm(a, it.perm).map(function (i) { return tx.o[i]; });
+    if (ty === 'match') return it.perm.map(function (li) { return tx.o[li] + '  →  ' + (a[li] == null ? t('card.noSel') : tx.m[a[li]]); });
+    if (ty === 'numeric') return [String(a).trim()];
+    return null;
+  }
+  function correctText(q, it) {
+    var ty = qType(q), tx = L(q);
+    if (ty === 'single') return [tx.o[q.c]];
+    if (ty === 'multi') return sortByPerm(q.c, it.perm).map(function (i) { return tx.o[i]; });
+    if (ty === 'match') return it.perm.map(function (li) { return tx.o[li] + '  →  ' + tx.m[q.c[li]]; });
+    if (ty === 'numeric') return [fmtNumber(q.c) + (q.tol ? t('card.tol', { tol: fmtNumber(q.tol) }) : '')];
+    return [];
+  }
 
   function finishExam(timedOut) {
     if (ex.finished) return;
     ex.finished = true;
     clearInterval(ex.timer);
     clearInterval(ex.breakTimer);
-    ex.remaining = Math.max(0, Math.ceil((ex.deadline - Date.now()) / 1000));
-    if (timedOut) ex.remaining = 0;
+    ex.timer = null;
+    ex.remaining = timedOut ? 0 : Math.max(0, Math.ceil((ex.deadline - Date.now()) / 1000));
 
-    var res = { total: ex.items.length, correct: 0, byDom: {}, byAp: {}, rows: [] };
+    var res = { total: ex.items.length, correct: 0, byDom: {}, byAp: {}, rows: [], timedOut: timedOut,
+                used: ex.totalSec - ex.remaining, date: new Date() };
     DOMAIN_KEYS.forEach(function (d) { res.byDom[d] = { n: 0, ok: 0 }; });
-    ['Predictive', 'Agile', 'Hybrid'].forEach(function (p) { res.byAp[p] = { n: 0, ok: 0 }; });
+    APPROACHES.forEach(function (p) { res.byAp[p] = { n: 0, ok: 0 }; });
 
     ex.items.forEach(function (it, i) {
       var q = it.q, a = ex.ans[i], ok = isCorrect(q, a);
@@ -614,81 +684,77 @@
       res.rows.push({ i: i, it: it, ok: ok, answered: isAnswered(q, a), flagged: ex.flag[i] });
     });
     res.pct = Math.round(res.correct / res.total * 1000) / 10;
+    ex.result = res;
 
-    var used = ex.totalSec - ex.remaining;
-    var entry = {
-      date: new Date().toISOString(), mode: ex.modeKey, focus: ex.focus, pct: res.pct, correct: res.correct, total: res.total,
-      dom: {}
-    };
+    var entry = { date: res.date.toISOString(), mode: ex.modeKey, focus: ex.focus, pct: res.pct, correct: res.correct, total: res.total, dom: {} };
     DOMAIN_KEYS.forEach(function (d) { var b = res.byDom[d]; entry.dom[d] = b.n ? Math.round(b.ok / b.n * 100) : null; });
     store.history.unshift(entry);
     store.history = store.history.slice(0, 30);
     saveStore();
 
-    renderResults(res, used, timedOut);
+    renderResults(res);
     show('screen-results');
   }
 
-  function renderResults(res, usedSec, timedOut) {
+  function renderResults(res) {
     var r = rating(res.pct);
-    var verdict = r === 3 ? ['pass', 'Above Target — strong readiness'] :
-                  r === 2 ? ['border', 'Target — borderline; keep practicing'] :
-                  r === 1 ? ['fail', 'Below Target — not ready yet'] :
-                            ['fail', 'Needs Improvement — not ready yet'];
-    var focusLabel = ex.focus ? ' · ' + DOMAINS[ex.focus].label + ' only' : '';
+    var vClass = r === 3 ? 'pass' : r === 2 ? 'border' : 'fail';
+    var focusLabel = ex.focus ? ' · ' + t('res.only', { d: domLabel(ex.focus) }) : '';
     var wrong = res.rows.filter(function (x) { return !x.ok; });
     var flagged = res.rows.filter(function (x) { return x.flagged; });
+    var prevTab = $('#results .tab.active');
+    var activeTab = prevTab ? prevTab.getAttribute('data-tab') : 'wrong';
+    var pct = function (v) { return lang === 'fr' ? String(v).replace('.', ',') + ' %' : v + '%'; };
 
-    var h = '';
-    h += '<h1>Practice Exam Score Report</h1>';
-    if (timedOut) h += '<p class="verdict fail">Time expired — the exam was ended and scored automatically.</p>';
-    h += '<div class="score-hero"><div class="score-big">' + res.pct + '%<small>' + res.correct + ' of ' + res.total + ' correct</small></div>';
-    h += '<div><div class="verdict ' + verdict[0] + '">Overall: ' + verdict[1] + '</div>';
-    h += '<p class="meta-list">Candidate: ' + esc(ex.name) + ' · ' + MODES[ex.modeKey].label + focusLabel +
-         ' · ' + new Date().toLocaleString() + '<br>Time used: ' + fmtTime(usedSec) + ' of ' + fmtTime(ex.totalSec) +
-         ' · Unanswered: ' + res.rows.filter(function (x) { return !x.answered; }).length +
-         ' · Flagged: ' + flagged.length + '</p></div></div>';
+    var h = '<h1>' + esc(t('res.h1')) + '</h1>';
+    if (res.timedOut) h += '<p class="verdict fail">' + esc(t('res.timeout')) + '</p>';
+    h += '<div class="score-hero"><div class="score-big">' + pct(res.pct) + '<small>' + esc(t('res.correctOf', { c: res.correct, t: res.total })) + '</small></div>';
+    h += '<div><div class="verdict ' + vClass + '">' + esc(t('res.overall', { v: t('verdict.' + r) })) + '</div>';
+    h += '<p class="meta-list">' + t('res.meta', {
+      name: esc(ex.name), form: esc(t('form.' + ex.modeKey) + focusLabel), date: esc(res.date.toLocaleString(locale())),
+      used: fmtTime(res.used), total: fmtTime(ex.totalSec),
+      un: res.rows.filter(function (x) { return !x.answered; }).length, fl: flagged.length
+    }) + '</p></div></div>';
 
-    h += '<h2 style="margin-top:22px">Performance by domain</h2>';
-    h += '<table class="data rating-table"><thead><tr><th>Domain</th><th>Score</th><th></th>' +
-         RATING_LABELS.map(function (l) { return '<th style="text-align:center;font-size:13px">' + l + '</th>'; }).join('') + '</tr></thead><tbody>';
+    h += '<h2 style="margin-top:22px">' + esc(t('res.byDomain')) + '</h2>';
+    h += '<div class="table-scroll"><table class="data rating-table"><thead><tr><th>' + esc(t('res.domain')) + '</th><th>' + esc(t('res.score')) + '</th><th></th>' +
+         [0, 1, 2, 3].map(function (k) { return '<th class="rt-h">' + esc(t('rating.' + k)) + '</th>'; }).join('') + '</tr></thead><tbody>';
     DOMAIN_KEYS.forEach(function (d) {
       var b = res.byDom[d];
       if (!b.n) return;
       var p = Math.round(b.ok / b.n * 100), rr = rating(p);
-      h += '<tr><td><b>' + DOMAINS[d].label + '</b><br><span class="note">' + b.ok + ' / ' + b.n + ' correct</span></td><td>' + p + '%</td>' +
+      h += '<tr><td><b>' + esc(domLabel(d)) + '</b><br><span class="note">' + esc(t('res.okOf', { c: b.ok, t: b.n })) + '</span></td><td>' + pct(p) + '</td>' +
            '<td><div class="bar"><span style="width:' + p + '%"></span></div></td>' +
            [0, 1, 2, 3].map(function (k) { return '<td class="rt' + (k === rr ? ' on' : '') + '">' + (k === rr ? '●' : '') + '</td>'; }).join('') + '</tr>';
     });
-    h += '</tbody></table>';
+    h += '</tbody></table></div>';
 
-    h += '<h2 style="margin-top:22px">Performance by delivery approach</h2><table class="data"><thead><tr><th>Approach</th><th>Correct</th><th>Score</th><th></th></tr></thead><tbody>';
-    ['Predictive', 'Agile', 'Hybrid'].forEach(function (p) {
+    h += '<h2 style="margin-top:22px">' + esc(t('res.byApproach')) + '</h2><table class="data"><thead><tr><th>' + esc(t('res.approach')) + '</th><th>' +
+         esc(t('res.correct')) + '</th><th>' + esc(t('res.score')) + '</th><th></th></tr></thead><tbody>';
+    APPROACHES.forEach(function (p) {
       var b = res.byAp[p];
       if (!b.n) return;
       var pc = Math.round(b.ok / b.n * 100);
-      h += '<tr><td>' + p + '</td><td>' + b.ok + ' / ' + b.n + '</td><td>' + pc + '%</td><td><div class="bar"><span style="width:' + pc + '%"></span></div></td></tr>';
+      h += '<tr><td>' + esc(t('ap.' + p)) + '</td><td>' + b.ok + ' / ' + b.n + '</td><td>' + pct(pc) + '</td><td><div class="bar"><span style="width:' + pc + '%"></span></div></td></tr>';
     });
     h += '</tbody></table>';
-    h += '<p class="note">PMI does not publish a passing percentage and reports results as performance ratings (Above Target, Target, Below Target, Needs Improvement). ' +
-         'Ratings here use practice thresholds: Above Target ≥ 80%, Target 65–79%, Below Target 50–64%, Needs Improvement &lt; 50%. ' +
-         'Aim to score consistently at Target or above, and ideally Above Target, on full-length practice exams before you book the real exam.</p>';
+    h += '<p class="note">' + t('res.note') + '</p>';
 
     h += '<div class="tabs noprint" role="tablist">' +
-         '<button class="tab active" data-tab="wrong">Incorrect &amp; unanswered (' + wrong.length + ')</button>' +
-         '<button class="tab" data-tab="flagged">Flagged (' + flagged.length + ')</button>' +
-         '<button class="tab" data-tab="all">All questions (' + res.rows.length + ')</button></div>';
+         '<button class="tab" data-tab="wrong">' + t('tab.wrong', { n: wrong.length }) + '</button>' +
+         '<button class="tab" data-tab="flagged">' + t('tab.flagged', { n: flagged.length }) + '</button>' +
+         '<button class="tab" data-tab="all">' + t('tab.all', { n: res.rows.length }) + '</button></div>';
     h += '<div class="rq-list" id="rq-list"></div>';
 
-    var root = $('#results');
-    root.innerHTML = h;
+    $('#results').innerHTML = h;
 
     var lists = { wrong: wrong, flagged: flagged, all: res.rows };
     function renderList(key) {
+      $all('#results .tab').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-tab') === key); });
       var list = lists[key], box = $('#rq-list');
       box.innerHTML = '';
       if (!list.length) {
-        box.appendChild(el('p', { class: 'empty', text: key === 'wrong' ? 'No incorrect answers — excellent work!' : 'Nothing to show.' }));
+        box.appendChild(el('p', { class: 'empty', text: t(key === 'wrong' ? 'res.noWrong' : 'res.nothing') }));
         return;
       }
       var frag = document.createDocumentFragment();
@@ -696,18 +762,14 @@
       box.appendChild(frag);
     }
     $all('#results .tab').forEach(function (b) {
-      b.addEventListener('click', function () {
-        $all('#results .tab').forEach(function (x) { x.classList.remove('active'); });
-        b.classList.add('active');
-        renderList(b.getAttribute('data-tab'));
-      });
+      b.addEventListener('click', function () { renderList(b.getAttribute('data-tab')); });
     });
-    renderList('wrong');
+    renderList(lists[activeTab] ? activeTab : 'wrong');
   }
 
   function answerBox(cls, label, lines) {
     var box = el('div', { class: 'ans-box ' + cls }, [el('span', { class: 'lbl', text: label })]);
-    if (!lines) { box.appendChild(el('span', { text: 'Not answered' })); return box; }
+    if (!lines) { box.appendChild(el('span', { text: t('card.notAnswered') })); return box; }
     if (lines.length === 1) { box.appendChild(el('span', { text: lines[0] })); return box; }
     var ul = el('ul');
     lines.forEach(function (l) { ul.appendChild(el('li', { text: l })); });
@@ -716,18 +778,16 @@
   }
 
   function reviewCard(row) {
-    var it = row.it, q = it.q, a = ex.ans[row.i];
-    var perm = qType(q) === 'match' ? it.perm : (it.perm || []);
+    var it = row.it, q = it.q, a = ex.ans[row.i], tx = L(q);
     var card = el('div', { class: 'rq' + (row.ok ? ' correct' : '') });
     card.appendChild(el('div', { class: 'rq-head' }, [
-      el('span', { text: 'Question ' + (row.i + 1) + (row.flagged ? '  ⚑ flagged' : '') }),
-      el('span', { text: DOMAINS[q.d].label + ' · ' + q.ap + ' · ' + (row.ok ? 'Correct' : row.answered ? 'Incorrect' : 'Unanswered') })
+      el('span', { text: t('exam.question', { n: row.i + 1 }) + (row.flagged ? '  ' + t('card.flagged') : '') }),
+      el('span', { text: domLabel(q.d) + ' · ' + t('ap.' + q.ap) + ' · ' + t(row.ok ? 'card.correct' : row.answered ? 'card.incorrect' : 'card.unanswered') })
     ]));
-    card.appendChild(el('div', { class: 'rq-stem', html: q.q }));
-    var yours = answerText(q, a, perm);
-    card.appendChild(answerBox('yours' + (row.ok ? ' right' : ''), row.ok ? 'Your answer — correct' : 'Your answer', yours));
-    if (!row.ok) card.appendChild(answerBox('correct', 'Correct answer', correctText(q, perm)));
-    if (q.e) card.appendChild(el('div', { class: 'explain', html: '<b>Explanation:</b> ' + esc(q.e) }));
+    card.appendChild(el('div', { class: 'rq-stem', html: tx.q }));
+    card.appendChild(answerBox('yours' + (row.ok ? ' right' : ''), t(row.ok ? 'card.yoursOk' : 'card.yours'), answerText(q, a, it)));
+    if (!row.ok) card.appendChild(answerBox('correct', t('card.right'), correctText(q, it)));
+    if (tx.e) card.appendChild(el('div', { class: 'explain', html: '<b>' + esc(t('card.explain')) + '</b> ' + esc(tx.e) }));
     return card;
   }
 
@@ -736,9 +796,7 @@
     var counts = { People: 0, Process: 0, Business: 0 };
     BANK.forEach(function (q) { if (counts[q.d] != null) counts[q.d]++; });
     var unseen = BANK.filter(function (q) { return !store.seen[q.id]; }).length;
-    $('#bank-info').textContent = 'Question bank: ' + BANK.length + ' questions (People ' + counts.People + ', Process ' + counts.Process +
-      ', Business Environment ' + counts.Business + '). Not yet seen on this device: ' + unseen +
-      '. Questions you have not seen recently are always served first.';
+    $('#bank-info').textContent = t('bank.info', { total: BANK.length, p: counts.People, r: counts.Process, b: counts.Business, unseen: unseen });
 
     var hp = $('#history-panel');
     if (!store.history.length) { hp.hidden = true; return; }
@@ -748,8 +806,8 @@
     store.history.slice(0, 10).forEach(function (h) {
       var cell = function (v) { return v == null ? '—' : v + '%'; };
       tb.appendChild(el('tr', null, [
-        el('td', { text: new Date(h.date).toLocaleString() }),
-        el('td', { text: (MODES[h.mode] ? MODES[h.mode].label : h.mode) + (h.focus ? ' · ' + DOMAINS[h.focus].label : '') }),
+        el('td', { text: new Date(h.date).toLocaleString(locale()) }),
+        el('td', { text: t('form.' + h.mode) + (h.focus ? ' · ' + domLabel(h.focus) : '') }),
         el('td', { text: h.pct + '% (' + h.correct + '/' + h.total + ')' }),
         el('td', { text: cell(h.dom.People) }), el('td', { text: cell(h.dom.Process) }), el('td', { text: cell(h.dom.Business) })
       ]));
@@ -758,12 +816,15 @@
 
   // ---------- wiring ----------
   function wire() {
+    $all('.lang-switch button').forEach(function (b) {
+      b.addEventListener('click', function () { setLang(b.getAttribute('data-lang')); });
+    });
     $('#btn-start').addEventListener('click', startExam);
     $('#btn-tutorial-next').addEventListener('click', function () { show('screen-agreement'); });
     $('#btn-disagree').addEventListener('click', function () {
-      modal('Agreement', 'You must agree to the practice exam conditions to start the exam.', [
-        { label: 'Return to start', action: function () { ex = null; show('screen-welcome'); } },
-        { label: 'Review agreement', primary: true }
+      modal(t('agr.modal'), esc(t('agr.must')), [
+        { label: t('agr.back'), action: function () { ex = null; show('screen-welcome'); } },
+        { label: t('agr.reread'), primary: true }
       ]);
     });
     $('#btn-agree').addEventListener('click', function () {
@@ -799,7 +860,7 @@
       setToggle(this, ex.hlMode);
       render();
     });
-    $('#tool-hl-clear').addEventListener('click', function () { ex.hl[ex.cur] = null; render(); });
+    $('#tool-hl-clear').addEventListener('click', function () { ex.hl[ex.cur] = {}; render(); });
     $('#tool-strike').addEventListener('click', function () {
       ex.strikeMode = !ex.strikeMode;
       if (ex.strikeMode && ex.hlMode) { ex.hlMode = false; setToggle($('#tool-hl'), false); }
@@ -821,7 +882,7 @@
     makeDraggable($('#calc'), $('#calc-head'));
 
     document.addEventListener('keydown', function (e) {
-      var examOn = $('#screen-exam').classList.contains('active');
+      var examOn = isActive('screen-exam');
       if (!$('#calc').hidden && !e.altKey && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
         var map = { Enter: '=', Backspace: 'BS', Escape: 'C', Delete: 'CE' };
         var k = map[e.key] || e.key;
@@ -843,9 +904,9 @@
     });
     $('#btn-new').addEventListener('click', function () { window.location.reload(); });
     $('#btn-reset-history').addEventListener('click', function () {
-      modal('Clear history', 'Delete your score history and the record of questions you have seen on this device?', [
-        { label: 'Cancel' },
-        { label: 'Delete', primary: true, action: function () { store = { seen: {}, history: [] }; saveStore(); renderWelcome(); } }
+      modal(t('hist.clearTitle'), esc(t('hist.clearAsk')), [
+        { label: t('btn.cancel') },
+        { label: t('btn.delete'), primary: true, action: function () { store = { seen: {}, history: [], lang: lang }; saveStore(); renderWelcome(); } }
       ]);
     });
 
@@ -853,14 +914,17 @@
       if (ex && !ex.finished && ex.timer) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    var last = store.lastName;
-    if (last) $('#cand-name').value = last;
+    if (store.lastName) $('#cand-name').value = store.lastName;
     $('#cand-name').addEventListener('change', function () { store.lastName = this.value.trim(); saveStore(); });
   }
 
   // Expose a tiny API for automated tests.
-  window.PMPSim = { isCorrect: isCorrect, isAnswered: isAnswered, pickQuestions: pickQuestions, state: function () { return ex; } };
+  window.PMPSim = {
+    isCorrect: isCorrect, isAnswered: isAnswered, parseNum: parseNum, pickQuestions: pickQuestions,
+    setLang: setLang, lang: function () { return lang; }, state: function () { return ex; }
+  };
 
+  applyStatic();
   wire();
   renderWelcome();
 })();

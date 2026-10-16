@@ -61,10 +61,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'BE008', d: 'Business', ap: 'Predictive',
   q: 'The change control board has approved a change request. What should the project manager do next?',
-  o: ["Close the change request and inform the requester of the approval",
-      "Update the plans and documents, communicate the change and manage its implementation",
+  o: ["Close the change request and inform the requester that it was approved",
+      "Update the plans and documents, communicate, and manage implementation",
       "Ask the team to start implementing the change as soon as possible",
-      "Create a new project to deliver the approved change"],
+      "Create a separate project to deliver the approved change on its own"],
   c: 1, e: 'After approval, the PM updates the baselines and affected documents and the change log, communicates with stakeholders, and directs the implementation.' },
 
 { id: 'BE009', d: 'Business', ap: 'Predictive',
@@ -154,10 +154,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'BE021', d: 'Business', ap: 'Hybrid',
   q: 'A risk owner has been assigned to a high-priority risk. What is the risk owner’s main responsibility?',
-  o: ["Paying for the impact of the risk if it occurs",
+  o: ["Paying for the financial impact of the risk if it actually occurs",
       "Monitoring the risk and ensuring its response is implemented",
-      "Approving all changes related to the risk",
-      "Closing the risk once its probability falls"],
+      "Approving all the change requests related to the risk",
+      "Closing the risk once its probability has fallen below the threshold"],
   c: 1, e: 'The risk owner is responsible for monitoring the risk and its triggers and for implementing (or coordinating) the agreed response.' },
 
 { id: 'BE022', d: 'Business', ap: 'Agile',
@@ -284,7 +284,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'BE038', d: 'Business', ap: 'Predictive',
   q: 'Which continuous improvement cycle consists of four repeated steps to test and implement changes?',
-  o: ['DMAIC', 'Plan-Do-Check-Act (PDCA)', 'SWOT', 'MoSCoW'],
+  o: ["DMAIC (Define, Measure, Analyze, Improve, Control)",
+      "Plan-Do-Check-Act (PDCA)",
+      "SWOT (Strengths, Weaknesses, Opportunities, Threats)",
+      "MoSCoW (Must, Should, Could, Won\u2019t)"],
   c: 1, e: 'The Deming (Shewhart) cycle: Plan, Do, Check (Study), Act. It is the basis of quality improvement.' },
 
 { id: 'BE039', d: 'Business', ap: 'Agile',
@@ -364,10 +367,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'BE049', d: 'Business', ap: 'Predictive',
   q: 'Which statement correctly differentiates a contingency plan from a workaround?',
-  o: ["They are the same; both describe actions taken after a risk occurs",
+  o: ["They are the same; both describe actions taken after a risk has actually occurred",
       "A contingency plan is prepared for an identified risk; a workaround responds to an unplanned problem",
-      "A workaround is prepared during risk planning; a contingency plan is improvised when needed",
-      "Contingency plans address opportunities only; workarounds address threats only"],
+      "A workaround is prepared during risk planning; a contingency plan is improvised when a problem occurs",
+      "Contingency plans address opportunities only, while workarounds are used to address threats only"],
   c: 1, e: 'Contingency plans are planned responses triggered by identified risk events. Workarounds are improvised for unforeseen problems.' },
 
 { id: 'BE050', d: 'Business', ap: 'Hybrid', t: 'multi',
@@ -382,7 +385,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'BE052', d: 'Business', ap: 'Hybrid',
   q: 'A regulator requires evidence that every safety requirement has been designed, built and tested. Which artifact supports this most directly?',
-  o: ['Requirements traceability matrix', 'Team charter', 'Burndown chart', 'Stakeholder register'],
+  o: ["Requirements traceability matrix",
+      "Team charter and working agreements",
+      "Burndown chart for each release",
+      "Stakeholder register and engagement plan"],
   c: 0, e: 'Traceability from requirements to design, implementation and testing provides auditable evidence of compliance.' },
 
 { id: 'BE053', d: 'Business', ap: 'Agile',
@@ -451,7 +457,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'BE061', d: 'Business', ap: 'Predictive',
   q: 'Which type of reserve analysis is used to determine whether the remaining contingency reserve is still adequate for the remaining project risks?',
-  o: ['Reserve analysis during Monitor Risks', 'Earned value analysis', 'Trend analysis of velocity', 'Make-or-buy analysis'],
+  o: ["Reserve analysis during Monitor Risks",
+      "Earned value analysis of cost performance",
+      "Trend analysis of the team\u2019s velocity",
+      "Make-or-buy analysis of the remaining work"],
   c: 0, e: 'Reserve analysis during monitoring compares the remaining contingency reserves with the remaining risk exposure to determine if reserves are still adequate.' },
 
 { id: 'BE062', d: 'Business', ap: 'Hybrid',

@@ -7,9 +7,15 @@ var vm = require('vm');
 
 var ctx = { window: {} };
 vm.createContext(ctx);
-['people.js', 'process.js', 'business.js'].forEach(function (f) {
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'questions', f), 'utf8'), ctx, { filename: f });
-});
+function loadDir(sub) {
+  var dir = path.join(__dirname, '..', 'questions', sub);
+  return fs.readdirSync(dir).filter(function (f) { return /\.js$/.test(f); }).sort().map(function (f) {
+    vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: sub + '/' + f });
+    return sub + '/' + f;
+  });
+}
+var enFiles = loadDir('en');
+var frFiles = fs.existsSync(path.join(__dirname, '..', 'questions', 'fr')) ? loadDir('fr') : [];
 var bank = ctx.window.PMP_BANK;
 var errors = [];
 var ids = {};
@@ -73,10 +79,37 @@ singles.forEach(function (q) {
   if (lens[q.c] > Math.max.apply(null, others) + 15) clearlyLongest.push(q.id);
 });
 var longestPct = Math.round(longest / singles.length * 100);
-if (longestPct > 40) errors.push('correct answer is the longest option in ' + longestPct + '% of single-choice items (max 40%)');
+if (longestPct > 36) errors.push('correct answer is the longest option in ' + longestPct + '% of single-choice items (max 36%)');
 if (clearlyLongest.length > singles.length * 0.05) errors.push('correct answer is longest by >15 chars in too many items: ' + clearlyLongest.join(', '));
 
+// French translations: complete, structurally identical, and free of the same length cue.
+var FR = ctx.window.PMP_FR || {};
+var frMissing = [], frLongest = 0, frSingles = 0;
+bank.forEach(function (q) {
+  var tr = FR[q.id];
+  if (!tr) { frMissing.push(q.id); return; }
+  var where = q.id + ' (fr): ';
+  if (!tr.q || !tr.e) errors.push(where + 'missing q or e');
+  var t = q.t || 'single';
+  if (t !== 'numeric') {
+    if (!Array.isArray(tr.o) || tr.o.length !== q.o.length) errors.push(where + 'option count differs from English');
+  } else if (tr.o) errors.push(where + 'numeric item must not have options');
+  if (t === 'match' && (!Array.isArray(tr.m) || tr.m.length !== q.m.length)) errors.push(where + 'match list differs from English');
+  (tr.o || []).forEach(function (o) { if (!o || typeof o !== 'string') errors.push(where + 'empty option'); });
+  if (t === 'single' && Array.isArray(tr.o)) {
+    frSingles++;
+    var fl = tr.o.map(function (o) { return o.length; });
+    if (fl[q.c] === Math.max.apply(null, fl)) frLongest++;
+  }
+});
+Object.keys(FR).forEach(function (id) { if (!bank.some(function (q) { return q.id === id; })) errors.push(id + ' (fr): no English question with this id'); });
+var frPct = frSingles ? Math.round(frLongest / frSingles * 100) : 0;
+if (frFiles.length && frSingles && frPct > 36) errors.push('French: correct answer is the longest option in ' + frPct + '% of single-choice items (max 36%)');
+var requireFr = process.argv.indexOf('--allow-missing-fr') < 0;
+if (frMissing.length && requireFr) errors.push(frMissing.length + ' question(s) have no French translation, e.g. ' + frMissing.slice(0, 5).join(', '));
+
 console.log('Questions:', bank.length, JSON.stringify(counts));
+console.log('French: ' + (bank.length - frMissing.length) + '/' + bank.length + ' translated; correct is longest in ' + frPct + '% of translated single-choice items');
 console.log('Answer-length cue: correct is longest in ' + longestPct + '% of single-choice items; clearly longest in ' + clearlyLongest.length);
 console.log('Approach mix:', JSON.stringify(ap));
 console.log('Item types:', JSON.stringify(types));

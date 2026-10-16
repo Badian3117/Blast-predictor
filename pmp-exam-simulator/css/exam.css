@@ -37,7 +37,7 @@ body {
   background: var(--navy);
   color: var(--bar-text);
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 0 16px; min-height: 46px; flex-wrap: wrap;
+  padding: 0 104px 0 16px; min-height: 46px; flex-wrap: wrap;
   position: sticky; top: 0; z-index: 20;
 }
 .topbar-title { font-weight: bold; font-size: 15px; padding: 10px 0; }
@@ -80,6 +80,12 @@ body {
 .nav-btn:disabled { opacity: .45; cursor: default; }
 .nav-btn.danger { color: var(--bad); }
 .nav-btn.small { font-size: 13px; padding: 4px 10px; }
+
+/* ---------- language switch (fixed over the top bar on every screen) ---------- */
+.lang-switch { position: fixed; top: 9px; right: 12px; z-index: 40; display: flex; border: 1px solid #fff; border-radius: 4px; overflow: hidden; }
+.lang-switch button { font: inherit; font-size: 13px; font-weight: bold; padding: 3px 9px; border: 0; background: transparent; color: #fff; cursor: pointer; }
+.lang-switch button[aria-pressed="true"] { background: #fff; color: var(--navy); }
+.lang-switch button:focus-visible { outline: 2px solid #ffd166; outline-offset: -2px; }
 
 /* ---------- generic pages ---------- */
 .page { max-width: 960px; width: 100%; margin: 0 auto; padding: 24px 16px 40px; flex: 1; }
@@ -194,6 +200,8 @@ kbd { border: 1px solid #aaa; border-bottom-width: 2px; border-radius: 3px; padd
 .verdict.border { color: var(--warn); }
 .verdict.fail { color: var(--bad); }
 .meta-list { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.table-scroll { overflow-x: auto; }
+.rating-table th.rt-h { text-align: center; font-size: 13px; }
 .rating-table td.rt { text-align: center; font-size: 13px; color: #9aa3ae; }
 .rating-table td.rt.on { background: var(--navy); color: #fff; font-weight: bold; }
 .bar { height: 10px; background: #e5e9ef; border-radius: 5px; overflow: hidden; min-width: 80px; }
@@ -229,7 +237,7 @@ kbd { border: 1px solid #aaa; border-bottom-width: 2px; border-radius: 3px; padd
 }
 
 @media print {
-  .noprint, .tabs, .bottombar { display: none !important; }
+  .noprint, .tabs, .bottombar, .lang-switch { display: none !important; }
   .topbar { position: static; background: #fff; color: #000; border-bottom: 2px solid #000; }
   .screen { display: none !important; }
   #screen-results { display: block !important; }

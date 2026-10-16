@@ -49,7 +49,10 @@ Array.prototype.push.apply(window.PMP_BANK, [
 
 { id: 'PE007', d: 'People', ap: 'Hybrid',
   q: 'During a tense steering meeting, the project manager notices their own frustration rising and pauses before answering a stakeholder’s criticism. Which emotional intelligence component is the project manager demonstrating?',
-  o: ['Social awareness', 'Self-regulation (self-management)', 'Relationship management', 'Empathy'],
+  o: ["Social awareness of others\u2019 emotions",
+      "Self-regulation (self-management)",
+      "Relationship management with stakeholders",
+      "Empathy toward the stakeholder"],
   c: 1, e: 'Recognizing one’s own emotion is self-awareness; controlling the reaction and choosing a constructive response is self-regulation / self-management.' },
 
 { id: 'PE008', d: 'People', ap: 'Agile',
