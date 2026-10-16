@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMP Practice Exam Simulator</title>
+  <link rel="stylesheet" href="css/exam.css">
+</head>
+<body>
+
+<!-- Language switch, shown on every screen -->
+<div class="lang-switch" role="group" aria-label="Language / Langue">
+  <button type="button" data-lang="en" aria-pressed="true">EN</button>
+  <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+</div>
+
+<!-- ============ WELCOME ============ -->
+<section id="screen-welcome" class="screen active">
+  <header class="topbar"><div class="topbar-title" data-i18n="app.title"></div></header>
+  <main class="page">
+    <h1 data-i18n="welcome.h1"></h1>
+    <p class="lead" data-i18n-html="welcome.lead"></p>
+
+    <div class="panel">
+      <label class="field"><span data-i18n="welcome.name"></span>
+        <input id="cand-name" type="text" maxlength="60" data-i18n-ph="welcome.namePh" autocomplete="name">
+      </label>
+
+      <fieldset class="field">
+        <legend data-i18n="welcome.form"></legend>
+        <label class="radio-row"><input type="radio" name="mode" value="full" checked> <span data-i18n-html="mode.full"></span></label>
+        <label class="radio-row"><input type="radio" name="mode" value="half"> <span data-i18n-html="mode.half"></span></label>
+        <label class="radio-row"><input type="radio" name="mode" value="quick"> <span data-i18n-html="mode.quick"></span></label>
+        <label class="radio-row"><input type="radio" name="mode" value="sprint"> <span data-i18n-html="mode.sprint"></span></label>
+      </fieldset>
+
+      <label class="field"><span data-i18n="welcome.focus"></span>
+        <select id="domain-focus">
+          <option value="" data-i18n="focus.all"></option>
+          <option value="People" data-i18n="focus.People"></option>
+          <option value="Process" data-i18n="focus.Process"></option>
+          <option value="Business" data-i18n="focus.Business"></option>
+        </select>
+      </label>
+
+      <p class="bank-info" id="bank-info"></p>
+      <div class="actions"><button class="btn primary" id="btn-start" data-i18n="welcome.start"></button></div>
+    </div>
+
+    <div class="panel" id="history-panel" hidden>
+      <h2 data-i18n="welcome.history"></h2>
+      <div class="table-scroll"><table class="data" id="history-table"><thead><tr><th data-i18n="hist.date"></th><th data-i18n="hist.form"></th><th data-i18n="hist.score"></th>
+        <th data-i18n="dom.People"></th><th data-i18n="dom.Process"></th><th data-i18n="dom.Business"></th></tr></thead><tbody></tbody></table></div>
+      <div class="actions"><button class="btn" id="btn-reset-history" data-i18n="welcome.clear"></button></div>
+    </div>
+
+    <p class="disclaimer" data-i18n="welcome.disclaimer"></p>
+  </main>
+</section>
+
+<!-- ============ TUTORIAL ============ -->
+<section id="screen-tutorial" class="screen">
+  <header class="topbar"><div class="topbar-title" data-i18n="tut.title"></div></header>
+  <main class="page">
+    <h1 data-i18n="tut.h1"></h1>
+    <p data-i18n="tut.intro"></p>
+    <table class="data tutorial">
+      <tr><th data-i18n="tut.nav"></th><td data-i18n-html="tut.navD"></td></tr>
+      <tr><th data-i18n="tut.flag"></th><td data-i18n-html="tut.flagD"></td></tr>
+      <tr><th data-i18n="tut.review"></th><td data-i18n-html="tut.reviewD"></td></tr>
+      <tr><th data-i18n="tut.hl"></th><td data-i18n-html="tut.hlD"></td></tr>
+      <tr><th data-i18n="tut.strike"></th><td data-i18n-html="tut.strikeD"></td></tr>
+      <tr><th data-i18n="tut.calc"></th><td data-i18n-html="tut.calcD"></td></tr>
+      <tr><th data-i18n-html="tut.sec"></th><td data-i18n-html="tut.secD"></td></tr>
+      <tr><th data-i18n="tut.types"></th><td data-i18n-html="tut.typesD"></td></tr>
+      <tr><th data-i18n="tut.lang"></th><td data-i18n-html="tut.langD"></td></tr>
+      <tr><th data-i18n="tut.time"></th><td data-i18n-html="tut.timeD"></td></tr>
+    </table>
+  </main>
+  <footer class="bottombar"><span></span><div><button class="nav-btn" id="btn-tutorial-next" data-i18n="nav.next"></button></div></footer>
+</section>
+
+<!-- ============ AGREEMENT ============ -->
+<section id="screen-agreement" class="screen">
+  <header class="topbar"><div class="topbar-title" data-i18n="agr.title"></div></header>
+  <main class="page">
+    <h1 data-i18n="agr.h1"></h1>
+    <div class="panel" data-i18n-html="agr.body"></div>
+  </main>
+  <footer class="bottombar"><span></span><div>
+    <button class="nav-btn" id="btn-disagree" data-i18n="agr.no"></button>
+    <button class="nav-btn" id="btn-agree" data-i18n="agr.yes"></button></div></footer>
+</section>
+
+<!-- ============ EXAM ============ -->
+<section id="screen-exam" class="screen">
+  <header class="topbar">
+    <div class="topbar-title" id="exam-title"></div>
+    <div class="topbar-info">
+      <span class="timer" id="timer" data-i18n-title="exam.timeTitle">&#9201; <span id="time-left">0:00:00</span></span>
+      <span class="qcount" id="qcount"></span>
+    </div>
+  </header>
+  <div class="toolbar">
+    <label class="tool flag-tool"><input type="checkbox" id="flag-cb"> <span data-i18n="exam.flag"></span></label>
+    <span class="tool-sep"></span>
+    <button class="tool" id="tool-calc" type="button" data-i18n="exam.calc"></button>
+    <button class="tool toggle" id="tool-hl" type="button" aria-pressed="false" data-i18n="exam.hl"></button>
+    <button class="tool" id="tool-hl-clear" type="button" data-i18n="exam.clear"></button>
+    <button class="tool toggle" id="tool-strike" type="button" aria-pressed="false"><s>abc</s> <span data-i18n="exam.strike"></span></button>
+    <span class="tool-sep"></span>
+    <button class="tool" id="tool-zoom" type="button">A<sup>+</sup> <span data-i18n="exam.zoom"></span></button>
+    <span class="section-info" id="section-info"></span>
+  </div>
+  <main class="qarea" id="qarea">
+    <div class="qmeta" id="qmeta"></div>
+    <div class="stem" id="stem"></div>
+    <div class="instr" id="instr"></div>
+    <div class="answers" id="answers"></div>
+    <div class="msg" id="qmsg" role="status"></div>
+  </main>
+  <footer class="bottombar">
+    <div><button class="nav-btn" id="btn-review" data-i18n="nav.review"></button></div>
+    <div>
+      <button class="nav-btn" id="btn-prev" data-i18n="nav.prev"></button>
+      <button class="nav-btn" id="btn-next" data-i18n="nav.next"></button>
+    </div>
+  </footer>
+</section>
+
+<!-- ============ REVIEW SCREEN ============ -->
+<section id="screen-review" class="screen">
+  <header class="topbar">
+    <div class="topbar-title" data-i18n="rev.title"></div>
+    <div class="topbar-info"><span class="timer">&#9201; <span class="time-left-mirror">0:00:00</span></span></div>
+  </header>
+  <main class="page">
+    <h1 id="review-heading"></h1>
+    <p data-i18n-html="rev.intro"></p>
+    <div class="legend"><span class="st st-inc" data-i18n="rev.inc"></span> <span class="st st-flag" data-i18n="rev.flagged"></span> <span class="st st-ok" data-i18n="rev.answered"></span></div>
+    <p class="review-summary" id="review-summary"></p>
+    <div class="review-grid" id="review-grid"></div>
+  </main>
+  <footer class="bottombar">
+    <div>
+      <button class="nav-btn" id="btn-rev-all" data-i18n="rev.all"></button>
+      <button class="nav-btn" id="btn-rev-inc" data-i18n="rev.incBtn"></button>
+      <button class="nav-btn" id="btn-rev-flag" data-i18n="rev.flagBtn"></button>
+    </div>
+    <div><button class="nav-btn danger" id="btn-end-section"></button></div>
+  </footer>
+</section>
+
+<!-- ============ BREAK ============ -->
+<section id="screen-break" class="screen">
+  <header class="topbar"><div class="topbar-title" data-i18n="brk.title"></div></header>
+  <main class="page center">
+    <h1 id="break-heading"></h1>
+    <div id="break-offer">
+      <div id="break-offer-text"></div>
+      <div class="actions center"><button class="btn" id="btn-skip-break" data-i18n="brk.skip"></button>
+        <button class="btn primary" id="btn-take-break" data-i18n="brk.take"></button></div>
+    </div>
+    <div id="break-running" hidden>
+      <p data-i18n="brk.left"></p>
+      <div class="big-clock" id="break-clock">10:00</div>
+      <p data-i18n="brk.auto"></p>
+      <div class="actions center"><button class="btn primary" id="btn-end-break" data-i18n="brk.return"></button></div>
+    </div>
+  </main>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section id="screen-results" class="screen">
+  <header class="topbar"><div class="topbar-title" data-i18n="res.title"></div>
+    <div class="topbar-info noprint"><button class="nav-btn small" id="btn-print" data-i18n="res.print"></button>
+      <button class="nav-btn small" id="btn-new" data-i18n="res.new"></button></div></header>
+  <main class="page results" id="results"></main>
+</section>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-backdrop" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div class="calc" id="calc" hidden>
+  <div class="calc-head" id="calc-head"><span data-i18n="calc.title"></span> <button class="calc-x" id="calc-close" aria-label="Close">&times;</button></div>
+  <div class="calc-display" id="calc-display">0</div>
+  <div class="calc-keys" id="calc-keys">
+    <button data-k="MC">MC</button><button data-k="MR">MR</button><button data-k="M+">M+</button><button data-k="M-">M&minus;</button>
+    <button data-k="C">C</button><button data-k="CE">CE</button><button data-k="BS">&larr;</button><button data-k="/" class="op">&divide;</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="*" class="op">&times;</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="-" class="op">&minus;</button>
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="+" class="op">+</button>
+    <button data-k="NEG">&plusmn;</button><button data-k="0">0</button><button data-k=".">.</button><button data-k="=" class="eq">=</button>
+    <button data-k="SQRT">&radic;</button><button data-k="SQ">x&sup2;</button><button data-k="INV">1/x</button><button data-k="%">%</button>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="questions/en/people.js"></script>
+<script src="questions/en/people-2.js"></script>
+<script src="questions/en/process.js"></script>
+<script src="questions/en/process-2.js"></script>
+<script src="questions/en/business.js"></script>
+<script src="questions/en/business-2.js"></script>
+<script src="questions/fr/people.js"></script>
+<script src="questions/fr/people-2.js"></script>
+<script src="questions/fr/process.js"></script>
+<script src="questions/fr/process-2.js"></script>
+<script src="questions/fr/business.js"></script>
+<script src="questions/fr/business-2.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
