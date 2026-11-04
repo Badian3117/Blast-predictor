@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MesureCam</title>
+<meta name="description" content="Mesurer une longueur ou une distance avec la caméra du téléphone.">
+<meta name="theme-color" content="#0f1720">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #0b1118; --panel: #141d27; --panel2: #1b2733; --line: #2a3a4a;
+    --text: #e8eef4; --muted: #93a4b5; --accent: #f5b301; --accent-ink: #1a1300;
+    --ref: #f5b301; --obj: #22d3ee; --cal: #f472b6; --ok: #34d399; --warn: #fbbf24; --err: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html, body { background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+  button, input, select { font: inherit; color: inherit; }
+  header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 1.15rem; flex: 1; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .chip { background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: .85rem; cursor: pointer; }
+  nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px 16px; max-width: 760px; margin: 0 auto; }
+  nav button { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 4px; cursor: pointer; font-weight: 600; font-size: .92rem; }
+  nav button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  main { max-width: 760px; margin: 0 auto; padding: 0 16px 24px; }
+  section[hidden] { display: none; }
+  .stage { position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: 62vh; background: #000; border-radius: 14px; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .stage video, .stage canvas.main { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage video { object-fit: cover; }
+  .stage .placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--muted); }
+  .stage .placeholder .btn { flex: 0 0 auto; }
+  .loupe { position: absolute; top: 10px; left: 10px; width: 130px; height: 130px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 18px rgba(0,0,0,.6); pointer-events: none; display: none; background: #000; }
+  .cross { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; transform: translate(-50%, -50%); pointer-events: none; }
+  .cross::before, .cross::after { content: ""; position: absolute; background: var(--accent); box-shadow: 0 0 3px #000; }
+  .cross::before { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
+  .cross::after { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
+  .hud { position: absolute; left: 8px; right: 8px; bottom: 8px; background: rgba(0,0,0,.6); border-radius: 10px; padding: 8px 10px; font-size: .9rem; pointer-events: none; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { flex: 1 1 auto; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); padding: 9px 14px; cursor: pointer; font-weight: 600; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 12px; }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--panel2); border-radius: 10px; padding: 4px; }
+  .seg button { border: 0; background: transparent; border-radius: 8px; padding: 8px 2px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  .step { margin-top: 10px; color: var(--muted); }
+  .step b { color: var(--text); }
+  label.f { display: block; margin-top: 10px; font-size: .88rem; color: var(--muted); }
+  label.f input, label.f select { display: block; width: 100%; margin-top: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-height: 42px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .result { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--line); }
+  .result .big { font-size: 1.7rem; font-weight: 700; color: var(--obj); }
+  .result .sub { font-size: .85rem; color: var(--muted); }
+  .note { font-size: .85rem; color: var(--muted); margin-top: 8px; }
+  .warn { color: var(--warn); }
+  .err { color: var(--err); }
+  .ok { color: var(--ok); }
+  details { margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  details summary { cursor: pointer; font-weight: 600; }
+  details ul { margin: 8px 0 0 18px; color: var(--muted); font-size: .9rem; }
+  details li { margin-top: 4px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  ol.list { margin: 8px 0 0 20px; }
+  /* AR overlay (WebXR dom-overlay root) */
+  #ar-overlay { position: fixed; inset: 0; z-index: 50; background: transparent; }
+  #ar-overlay[hidden] { display: none; }
+  #ar-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .ar-top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; background: rgba(0,0,0,.6); border-radius: 12px; padding: 10px 12px; text-align: center; }
+  .ar-top .big { font-size: 1.5rem; font-weight: 700; }
+  .ar-list { position: absolute; left: 12px; right: 12px; bottom: calc(96px + env(safe-area-inset-bottom)); max-height: 30vh; overflow: auto; background: rgba(0,0,0,.55); border-radius: 12px; padding: 8px 12px; font-size: .9rem; }
+  .ar-list:empty { display: none; }
+  .ar-bar { position: absolute; left: 12px; right: 12px; bottom: max(16px, env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .ar-bar .btn { flex: 1; background: rgba(20,29,39,.85); color: #fff; }
+  .ar-bar .add { flex: 0 0 72px; height: 72px; border-radius: 50%; font-size: 2rem; background: var(--accent); color: var(--accent-ink); border: 4px solid #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mesure<span>Cam</span></h1>
+  <button id="install" class="chip" hidden data-i18n="install">Installer</button>
+  <button id="lang" class="chip" aria-label="Language">EN</button>
+</header>
+
+<nav role="tablist">
+  <button role="tab" data-tab="photo" aria-selected="true" data-i18n="tabPhoto">Photo</button>
+  <button role="tab" data-tab="tilt" aria-selected="false" data-i18n="tabTilt">Inclinaison</button>
+  <button role="tab" data-tab="ar" aria-selected="false" data-i18n="tabAR">RA 3D</button>
+</nav>
+
+<main>
+  <!-- ============ PHOTO ============ -->
+  <section id="view-photo">
+    <div class="stage" id="p-stage">
+      <video id="p-video" playsinline muted autoplay></video>
+      <canvas id="p-canvas" class="main" hidden></canvas>
+      <canvas id="p-loupe" class="loupe"></canvas>
+      <div class="placeholder" id="p-ph">
+        <div data-i18n="camOff">La caméra est éteinte.</div>
+        <button class="btn primary" data-camstart data-i18n="camStart">Activer la caméra</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="p-capture" data-i18n="capture">Capturer</button>
+      <button class="btn" id="p-import" data-i18n="import">Importer une photo</button>
+      <button class="btn" id="p-retake" hidden data-i18n="retake">Nouvelle photo</button>
+      <input type="file" id="p-file" accept="image/*" hidden>
+    </div>
+    <div class="card" id="p-panel">
+      <div class="seg" id="p-methods">
+        <button data-m="ref" data-i18n="mRef">Référence</button>
+        <button data-m="dist" data-i18n="mDist">Distance</button>
+        <button data-m="size" data-i18n="mSize">Taille</button>
+        <button data-m="calib" data-i18n="mCalib">Calibrer</button>
+      </div>
+      <p class="note" id="p-mdesc"></p>
+      <div id="p-inputs"></div>
+      <p class="step" id="p-step"></p>
+      <div class="result" id="p-result" hidden></div>
+      <div class="row">
+        <button class="btn" id="p-clear" data-i18n="clearPts">Effacer les points</button>
+        <button class="btn" id="p-again" hidden data-i18n="newMeasure">Mesurer un autre objet</button>
+      </div>
+      <p class="note" id="p-calinfo"></p>
+    </div>
+    <details>
+      <summary data-i18n="tipsTitle">Conseils de précision</summary>
+      <ul>
+        <li data-i18n="tipP1"></li>
+        <li data-i18n="tipP2"></li>
+        <li data-i18n="tipP3"></li>
+        <li data-i18n="tipP4"></li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ============ TILT ============ -->
+  <section id="view-tilt" hidden>
+    <div class="stage" id="t-stage">
+      <video id="t-video" playsinline muted autoplay></video>
+      <div class="cross"></div>
+      <div class="placeholder" id="t-ph">
+        <div data-i18n="camOff">La caméra est éteinte.</div>
+        <button class="btn primary" data-camstart data-i18n="camStart">Activer la caméra</button>
+      </div>
+      <div class="hud" id="t-hud">—</div>
+    </div>
+    <div class="card">
+      <p class="note" data-i18n="tiltDesc"></p>
+      <label class="f"><span data-i18n="tiltHeight">Hauteur de l'objectif au-dessus du sol (cm)</span>
+        <input type="number" id="t-h" inputmode="decimal" min="10" max="1000" step="1">
+      </label>
+      <div class="row">
+        <button class="btn" id="t-perm" hidden data-i18n="sensors">Activer les capteurs</button>
+        <button class="btn primary" id="t-base" data-i18n="aimBase">Viser la base → distance</button>
+        <button class="btn" id="t-top" disabled data-i18n="aimTop">Viser le sommet → hauteur</button>
+      </div>
+      <div class="result" id="t-result" hidden></div>
+    </div>
+    <details>
+      <summary data-i18n="tipsTitle">Conseils de précision</summary>
+      <ul>
+        <li data-i18n="tipT1"></li>
+        <li data-i18n="tipT2"></li>
+        <li data-i18n="tipT3"></li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ============ AR ============ -->
+  <section id="view-ar" hidden>
+    <div class="card">
+      <p data-i18n="arDesc"></p>
+      <p class="note" id="ar-support"></p>
+      <div class="row"><button class="btn primary" id="ar-start" disabled data-i18n="arStart">Démarrer la RA</button></div>
+      <div id="ar-results"></div>
+    </div>
+    <details>
+      <summary data-i18n="tipsTitle">Conseils de précision</summary>
+      <ul>
+        <li data-i18n="tipA1"></li>
+        <li data-i18n="tipA2"></li>
+        <li data-i18n="tipA3"></li>
+      </ul>
+    </details>
+  </section>
+</main>
+
+<div id="ar-overlay" hidden>
+  <canvas id="ar-canvas"></canvas>
+  <div class="ar-top"><div class="sub" data-i18n="arCamToPoint">Caméra → point visé</div><div class="big" id="ar-dist">—</div><div class="note" id="ar-hint"></div></div>
+  <div class="ar-list" id="ar-list"></div>
+  <div class="ar-bar">
+    <button class="btn" id="ar-undo" data-i18n="undo">Annuler</button>
+    <button class="btn add" id="ar-add" aria-label="+">+</button>
+    <button class="btn" id="ar-clear" data-i18n="clear">Effacer</button>
+    <button class="btn" id="ar-exit" data-i18n="exit">Quitter</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= Utilities ================= */
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("mesurecam." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("mesurecam." + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem("mesurecam." + k); } catch {} },
+};
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const DEG = Math.PI / 180;
+// Uncalibrated default: focal length / long side of the image, for a typical
+// 26 mm-equivalent main phone camera (4:3 sensor): f = 26 / 34.6 ≈ 0.75 × long side.
+const DEFAULT_FN = 0.75;
+const DEFAULT_FN_REL_ERR = 0.15;
+const CAL_REL_ERR = 0.02;
+
+/* ================= i18n ================= */
+const I18N = {
+  fr: {
+    install: "Installer", tabPhoto: "Photo", tabTilt: "Inclinaison", tabAR: "RA 3D",
+    camOff: "La caméra est éteinte.", camStart: "Activer la caméra",
+    camErr: "Caméra inaccessible : {e}. Autorisez la caméra (HTTPS requis) ou importez une photo.",
+    capture: "Capturer", import: "Importer une photo", retake: "Nouvelle photo",
+    mRef: "Référence", mDist: "Distance", mSize: "Taille", mCalib: "Calibrer",
+    dRef: "Mesure la longueur d'un objet grâce à un objet de taille connue posé dans le même plan (carte bancaire, feuille A4, mètre…).",
+    dDist: "Estime la distance caméra → objet à partir de la taille réelle connue de l'objet.",
+    dSize: "Estime la taille d'un objet à partir de sa distance connue à la caméra.",
+    dCalib: "Calibre la focale de votre caméra une fois pour toutes : photographiez un objet de taille connue à une distance mesurée au mètre.",
+    refPreset: "Objet de référence", refLen: "Longueur réelle de la référence (cm)",
+    presetCard: "Carte bancaire / CNI (8,56 cm)", presetA4L: "Feuille A4 – long côté (29,7 cm)", presetA4S: "Feuille A4 – petit côté (21,0 cm)",
+    presetM: "Règle / mètre (100 cm)", presetCustom: "Autre (saisir)",
+    knownSize: "Taille réelle de l'objet (cm)", knownDist: "Distance caméra → objet (cm)",
+    calSize: "Taille réelle de l'objet (cm)", calDist: "Distance mesurée au mètre (cm)",
+    stepCapture: "Visez puis appuyez sur <b>Capturer</b> (ou importez une photo).",
+    stepRef: "Touchez les <b>2 extrémités de la référence</b> <span class='dot' style='background:var(--ref)'></span> ({n}/2).",
+    stepObj: "Touchez les <b>2 extrémités de l'objet</b> <span class='dot' style='background:var(--obj)'></span> ({n}/2).",
+    stepCal: "Touchez les <b>2 extrémités de l'objet connu</b> <span class='dot' style='background:var(--cal)'></span> ({n}/2).",
+    stepAdjust: "Faites glisser un point pour l'ajuster (une loupe apparaît).",
+    needInput: "Saisissez les valeurs ci-dessus.",
+    resLen: "Longueur de l'objet", resDist: "Distance caméra → objet", resSize: "Taille de l'objet",
+    resCal: "Focale mesurée : {f} px ({fn} × grand côté)",
+    pxInfo: "{p} px mesurés", errPoint: "± {e} (pointé)", errTot: "± {e} (pointé + calibration)",
+    saveCal: "Enregistrer la calibration", calSaved: "Calibration enregistrée.",
+    calOn: "Calibré : focale = {fn} × grand côté de l'image.", calOff: "Non calibré : estimation par défaut (±15 %). Utilisez « Calibrer » pour plus de précision.",
+    calReset: "Réinitialiser", importWarn: "Photo importée : la calibration n'est valable que si elle vient de cette caméra, sans zoom ni recadrage.",
+    smallPx: "Segment court : agrandissez l'objet dans l'image pour plus de précision.",
+    clearPts: "Effacer les points", newMeasure: "Mesurer un autre objet",
+    tipsTitle: "Conseils de précision",
+    tipP1: "Placez la référence dans le même plan et à la même distance que l'objet, téléphone bien parallèle à la surface.",
+    tipP2: "Gardez l'objet près du centre de l'image (moins de distorsion) et remplissez le cadre.",
+    tipP3: "Calibrez une fois à environ 1 m avec un mètre ruban ; ne zoomez pas ensuite (le zoom change la focale).",
+    tipP4: "Utilisez la loupe : l'erreur relative ≈ 1,4 × (erreur de pointé en px) ÷ (longueur en px).",
+    tiltDesc: "Tenez le téléphone à une hauteur connue, visez avec la croix le point où l'objet touche le sol : la distance est calculée par trigonométrie (sol plat). Visez ensuite le sommet pour sa hauteur.",
+    tiltHeight: "Hauteur de l'objectif au-dessus du sol (cm)", sensors: "Activer les capteurs",
+    aimBase: "Viser la base → distance", aimTop: "Viser le sommet → hauteur",
+    noSensor: "Capteur d'orientation indisponible sur cet appareil/navigateur.",
+    angleBelow: "Angle : {a}° sous l'horizontale", angleAbove: "Angle : {a}° au-dessus de l'horizontale",
+    liveDist: "Distance au sol visé : {d}", aimLower: "Visez plus bas que l'horizon pour mesurer une distance.",
+    shallow: "Angle trop faible : précision médiocre.", steady: "Stable", unsteady: "Tenez immobile…",
+    tDist: "Distance horizontale", tHeight: "Hauteur de l'objet", tErr: "± {e} (pour ±0,5° d'erreur d'angle)",
+    tipT1: "Mesurez la hauteur de l'objectif (pas des yeux) ; une erreur de 5 % sur la hauteur donne 5 % sur la distance.",
+    tipT2: "Le sol doit être plat et horizontal entre vous et l'objet.",
+    tipT3: "Au-delà d'environ 10 × la hauteur du téléphone (≈ 15 m), l'angle devient trop faible et l'erreur explose.",
+    arDesc: "Mode le plus précis : le téléphone suit ses déplacements en 3D (ARCore). Visez une surface, appuyez sur + pour poser des points ; chaque paire de points donne une longueur. La distance caméra → point visé s'affiche en continu.",
+    arChecking: "Vérification de la compatibilité…", arOk: "Compatible.",
+    arNo: "Non disponible ici. La RA web nécessite Chrome sur Android avec « Google Play Services for AR » et une page HTTPS. Sur iPhone, utilisez les modes Photo et Inclinaison.",
+    arStart: "Démarrer la RA", arErr: "Impossible de démarrer la RA : {e}",
+    arCamToPoint: "Caméra → point visé", arScan: "Déplacez lentement le téléphone pour détecter les surfaces…",
+    arPlace1: "Visez le début et appuyez sur +", arPlace2: "Visez la fin et appuyez sur +",
+    seg: "Segment {i}", lastResults: "Dernières mesures :",
+    undo: "Annuler", clear: "Effacer", exit: "Quitter",
+    tipA1: "Bonne lumière et surfaces texturées : les murs blancs unis et les sols brillants sont mal détectés.",
+    tipA2: "Balayez la zone quelques secondes avant de poser les points.",
+    tipA3: "Précision typique : 1 à 3 % jusqu'à quelques mètres.",
+  },
+  en: {
+    install: "Install", tabPhoto: "Photo", tabTilt: "Tilt", tabAR: "3D AR",
+    camOff: "The camera is off.", camStart: "Turn on camera",
+    camErr: "Camera unavailable: {e}. Allow camera access (HTTPS required) or import a photo.",
+    capture: "Capture", import: "Import photo", retake: "New photo",
+    mRef: "Reference", mDist: "Distance", mSize: "Size", mCalib: "Calibrate",
+    dRef: "Measures an object's length using an object of known size placed in the same plane (bank card, A4 sheet, ruler…).",
+    dDist: "Estimates the camera → object distance from the object's known real size.",
+    dSize: "Estimates an object's size from its known distance to the camera.",
+    dCalib: "Calibrates your camera's focal length once: photograph an object of known size at a distance measured with a tape.",
+    refPreset: "Reference object", refLen: "Real length of the reference (cm)",
+    presetCard: "Bank / ID card (8.56 cm)", presetA4L: "A4 sheet – long side (29.7 cm)", presetA4S: "A4 sheet – short side (21.0 cm)",
+    presetM: "Ruler / tape (100 cm)", presetCustom: "Other (enter)",
+    knownSize: "Real size of the object (cm)", knownDist: "Camera → object distance (cm)",
+    calSize: "Real size of the object (cm)", calDist: "Distance measured with a tape (cm)",
+    stepCapture: "Aim, then tap <b>Capture</b> (or import a photo).",
+    stepRef: "Tap the <b>2 ends of the reference</b> <span class='dot' style='background:var(--ref)'></span> ({n}/2).",
+    stepObj: "Tap the <b>2 ends of the object</b> <span class='dot' style='background:var(--obj)'></span> ({n}/2).",
+    stepCal: "Tap the <b>2 ends of the known object</b> <span class='dot' style='background:var(--cal)'></span> ({n}/2).",
+    stepAdjust: "Drag a point to fine-tune it (a magnifier appears).",
+    needInput: "Enter the values above.",
+    resLen: "Object length", resDist: "Camera → object distance", resSize: "Object size",
+    resCal: "Measured focal length: {f} px ({fn} × long side)",
+    pxInfo: "{p} px measured", errPoint: "± {e} (pointing)", errTot: "± {e} (pointing + calibration)",
+    saveCal: "Save calibration", calSaved: "Calibration saved.",
+    calOn: "Calibrated: focal length = {fn} × image long side.", calOff: "Not calibrated: default estimate (±15%). Use “Calibrate” for better accuracy.",
+    calReset: "Reset", importWarn: "Imported photo: calibration only applies if it comes from this camera, without zoom or cropping.",
+    smallPx: "Short segment: make the object larger in the frame for better accuracy.",
+    clearPts: "Clear points", newMeasure: "Measure another object",
+    tipsTitle: "Accuracy tips",
+    tipP1: "Put the reference in the same plane and at the same distance as the object, with the phone parallel to the surface.",
+    tipP2: "Keep the object near the image centre (less distortion) and fill the frame.",
+    tipP3: "Calibrate once at about 1 m with a tape measure; don't zoom afterwards (zoom changes the focal length).",
+    tipP4: "Use the magnifier: relative error ≈ 1.4 × (pointing error in px) ÷ (length in px).",
+    tiltDesc: "Hold the phone at a known height and aim the cross at the point where the object meets the ground: the distance is computed by trigonometry (flat ground). Then aim at the top for its height.",
+    tiltHeight: "Lens height above the ground (cm)", sensors: "Enable sensors",
+    aimBase: "Aim at base → distance", aimTop: "Aim at top → height",
+    noSensor: "Orientation sensor unavailable on this device/browser.",
+    angleBelow: "Angle: {a}° below horizontal", angleAbove: "Angle: {a}° above horizontal",
+    liveDist: "Distance to aimed ground point: {d}", aimLower: "Aim below the horizon to measure a distance.",
+    shallow: "Angle too shallow: poor accuracy.", steady: "Steady", unsteady: "Hold still…",
+    tDist: "Horizontal distance", tHeight: "Object height", tErr: "± {e} (for ±0.5° angle error)",
+    tipT1: "Measure the lens height (not eye height); a 5% height error gives a 5% distance error.",
+    tipT2: "The ground must be flat and level between you and the object.",
+    tipT3: "Beyond about 10 × the phone height (≈ 15 m) the angle gets too shallow and the error blows up.",
+    arDesc: "Most accurate mode: the phone tracks its own motion in 3D (ARCore). Aim at a surface and tap + to place points; each pair of points gives a length. The camera → aimed point distance is shown live.",
+    arChecking: "Checking compatibility…", arOk: "Supported.",
+    arNo: "Not available here. Web AR needs Chrome on Android with “Google Play Services for AR” and an HTTPS page. On iPhone, use the Photo and Tilt modes.",
+    arStart: "Start AR", arErr: "Could not start AR: {e}",
+    arCamToPoint: "Camera → aimed point", arScan: "Move the phone slowly to detect surfaces…",
+    arPlace1: "Aim at the start and tap +", arPlace2: "Aim at the end and tap +",
+    seg: "Segment {i}", lastResults: "Last measurements:",
+    undo: "Undo", clear: "Clear", exit: "Exit",
+    tipA1: "Good light and textured surfaces: plain white walls and shiny floors are poorly detected.",
+    tipA2: "Sweep the area for a few seconds before placing points.",
+    tipA3: "Typical accuracy: 1–3% up to a few metres.",
+  },
+};
+let lang = store.get("lang", (navigator.language || "fr").toLowerCase().startsWith("en") ? "en" : "fr");
+function t(k, vars) {
+  let s = I18N[lang][k] ?? I18N.fr[k] ?? k;
+  if (vars) for (const [a, b] of Object.entries(vars)) s = s.split("{" + a + "}").join(b);
+  return s;
+}
+function num(v, d) { return new Intl.NumberFormat(lang, { minimumFractionDigits: d, maximumFractionDigits: d }).format(v); }
+// Length in metres → readable string.
+function fmtLen(m) {
+  if (!isFinite(m)) return "—";
+  const a = Math.abs(m);
+  if (a < 0.01) return num(m * 1000, 1) + " mm";
+  if (a < 1) return num(m * 100, 1) + " cm";
+  if (a < 1000) return num(m, 2) + " m";
+  return num(m / 1000, 2) + " km";
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  $("#lang").textContent = lang === "fr" ? "EN" : "FR";
+  buildPhotoInputs();
+  updatePhoto();
+  updateTiltResult();
+  refreshARSupport();
+}
+$("#lang").addEventListener("click", () => { lang = lang === "fr" ? "en" : "fr"; store.set("lang", lang); applyI18n(); });
+
+/* ================= Tabs ================= */
+let tab = "photo";
+$$("nav [data-tab]").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+function setTab(name) {
+  tab = name;
+  $$("nav [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  for (const v of ["photo", "tilt", "ar"]) $("#view-" + v).hidden = v !== name;
+  if (name === "ar") stopCamera();
+  else if (store.get("camOk", false)) attachCamera();
+  if (name === "photo") requestAnimationFrame(layoutPhoto);
+  if (name === "tilt") startOrientation();
+}
+
+/* ================= Camera ================= */
+let stream = null;
+async function getStream() {
+  if (stream && stream.active) return stream;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("getUserMedia");
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+  });
+  return stream;
+}
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach((tr) => tr.stop()); stream = null; }
+  for (const id of ["#p-video", "#t-video"]) $(id).srcObject = null;
+  $("#p-ph").hidden = !!photo.img; $("#t-ph").hidden = false;
+}
+async function attachCamera() {
+  const video = tab === "tilt" ? $("#t-video") : $("#p-video");
+  const ph = tab === "tilt" ? $("#t-ph") : $("#p-ph");
+  try {
+    const s = await getStream();
+    store.set("camOk", true);
+    if (video.srcObject !== s) video.srcObject = s;
+    await video.play().catch(() => {});
+    ph.hidden = true;
+    return true;
+  } catch (e) {
+    store.set("camOk", false);
+    ph.hidden = false;
+    ph.querySelector("div").textContent = t("camErr", { e: e && e.name ? e.name : String(e) });
+    return false;
+  }
+}
+$$("[data-camstart]").forEach((b) => b.addEventListener("click", attachCamera));
+
+/* ================= PHOTO MODE ================= */
+const METHODS = { ref: ["ref", "obj"], dist: ["obj"], size: ["obj"], calib: ["cal"] };
+const COLORS = { ref: "#f5b301", obj: "#22d3ee", cal: "#f472b6" };
+const PRESETS = [
+  { k: "presetCard", v: 8.56 }, { k: "presetA4L", v: 29.7 }, { k: "presetA4S", v: 21.0 }, { k: "presetM", v: 100 }, { k: "presetCustom", v: null },
+];
+const photo = {
+  img: null, fromCam: false, method: store.get("method", "ref"),
+  pts: { ref: [], obj: [], cal: [] },
+  vals: Object.assign({ preset: 0, refLen: 8.56, knownSize: "", knownDist: "", calSize: 8.56, calDist: 100 }, store.get("vals", {})),
+  lastCalFn: null,
+};
+const pc = $("#p-canvas"), pctx = pc.getContext("2d");
+const loupe = $("#p-loupe"), lctx = loupe.getContext("2d");
+const view = { s: 1, ox: 0, oy: 0, W: 0, H: 0, dpr: 1 };
+
+function focal() {
+  const fn = store.get("fn", null);
+  const M = photo.img ? Math.max(photo.img.width, photo.img.height) : 1;
+  return { f: (fn || DEFAULT_FN) * M, fn: fn || DEFAULT_FN, calibrated: !!fn };
+}
+function pxLen(set) {
+  const a = photo.pts[set];
+  return a.length === 2 ? Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) : 0;
+}
+// Pointing error per endpoint in image pixels: ~1 display pixel with the magnifier, never below 1 image px.
+function sigmaPx() { return Math.max(1, 1 / view.s); }
+function relErr(p) { return p > 0 ? (Math.SQRT2 * sigmaPx()) / p : Infinity; }
+function activeSet() { return METHODS[photo.method].find((s) => photo.pts[s].length < 2) || null; }
+function valNum(k) { const v = parseFloat(String(photo.vals[k]).replace(",", ".")); return isFinite(v) && v > 0 ? v : null; }
+
+function setFrozen(canvas, fromCam) {
+  photo.img = canvas; photo.fromCam = fromCam;
+  photo.pts = { ref: [], obj: [], cal: [] };
+  $("#p-video").hidden = true; pc.hidden = false; $("#p-ph").hidden = true;
+  $("#p-capture").hidden = true; $("#p-retake").hidden = false;
+  layoutPhoto(); updatePhoto();
+}
+$("#p-capture").addEventListener("click", async () => {
+  const v = $("#p-video");
+  if (!v.videoWidth) { if (!(await attachCamera())) return; await new Promise((r) => setTimeout(r, 400)); }
+  if (!v.videoWidth) return;
+  const c = document.createElement("canvas");
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext("2d").drawImage(v, 0, 0);
+  setFrozen(c, true);
+});
+$("#p-retake").addEventListener("click", () => {
+  photo.img = null; pc.hidden = true; $("#p-video").hidden = false;
+  $("#p-capture").hidden = false; $("#p-retake").hidden = true;
+  if (store.get("camOk", false)) attachCamera(); else $("#p-ph").hidden = false;
+  updatePhoto();
+});
+$("#p-import").addEventListener("click", () => $("#p-file").click());
+$("#p-file").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = im.naturalWidth; c.height = im.naturalHeight;
+    c.getContext("2d").drawImage(im, 0, 0);
+    URL.revokeObjectURL(url);
+    setFrozen(c, false);
+  };
+  im.src = url;
+});
+
+function layoutPhoto() {
+  const r = pc.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = window.devicePixelRatio || 1;
+  pc.width = Math.round(r.width * dpr); pc.height = Math.round(r.height * dpr);
+  Object.assign(view, { W: r.width, H: r.height, dpr });
+  if (photo.img) {
+    const iw = photo.img.width, ih = photo.img.height;
+    view.s = Math.min(r.width / iw, r.height / ih);
+    view.ox = (r.width - iw * view.s) / 2; view.oy = (r.height - ih * view.s) / 2;
+  }
+  drawPhoto();
+}
+window.addEventListener("resize", () => { if (tab === "photo") layoutPhoto(); });
+const toScreen = (p) => ({ x: view.ox + p.x * view.s, y: view.oy + p.y * view.s });
+const toImg = (x, y) => ({ x: (x - view.ox) / view.s, y: (y - view.oy) / view.s });
+
+function drawPhoto() {
+  pctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  pctx.fillStyle = "#000"; pctx.fillRect(0, 0, view.W, view.H);
+  if (!photo.img) return;
+  pctx.imageSmoothingQuality = "high";
+  pctx.drawImage(photo.img, view.ox, view.oy, photo.img.width * view.s, photo.img.height * view.s);
+  const labels = segmentLabels();
+  for (const set of METHODS[photo.method]) {
+    const pts = photo.pts[set].map(toScreen);
+    pctx.lineCap = "round";
+    if (pts.length === 2) {
+      pctx.strokeStyle = "rgba(0,0,0,.7)"; pctx.lineWidth = 5;
+      pctx.beginPath(); pctx.moveTo(pts[0].x, pts[0].y); pctx.lineTo(pts[1].x, pts[1].y); pctx.stroke();
+      pctx.strokeStyle = COLORS[set]; pctx.lineWidth = 2.5; pctx.stroke();
+    }
+    for (const p of pts) {
+      pctx.lineWidth = 2;
+      pctx.strokeStyle = "#000"; pctx.beginPath(); pctx.arc(p.x, p.y, 9, 0, 2 * Math.PI); pctx.stroke();
+      pctx.strokeStyle = COLORS[set]; pctx.beginPath(); pctx.arc(p.x, p.y, 8, 0, 2 * Math.PI); pctx.stroke();
+      pctx.beginPath(); pctx.moveTo(p.x - 4, p.y); pctx.lineTo(p.x + 4, p.y); pctx.moveTo(p.x, p.y - 4); pctx.lineTo(p.x, p.y + 4); pctx.stroke();
+    }
+    if (pts.length === 2 && labels[set]) {
+      const mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+      pctx.font = "600 14px system-ui, sans-serif";
+      const w = pctx.measureText(labels[set]).width + 12;
+      pctx.fillStyle = "rgba(0,0,0,.75)"; pctx.fillRect(mx - w / 2, my - 26, w, 20);
+      pctx.fillStyle = COLORS[set]; pctx.textAlign = "center"; pctx.fillText(labels[set], mx, my - 11);
+    }
+  }
+}
+function drawLoupe(pt, fingerX) {
+  const size = 130, dpr = view.dpr;
+  loupe.width = size * dpr; loupe.height = size * dpr;
+  loupe.style.display = "block";
+  loupe.style.left = fingerX < view.W / 2 ? "auto" : "10px";
+  loupe.style.right = fingerX < view.W / 2 ? "10px" : "auto";
+  const scale = Math.max(view.s * 4, 2); // display px per image px inside the loupe
+  const sw = size / scale;
+  lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  lctx.fillStyle = "#000"; lctx.fillRect(0, 0, size, size);
+  lctx.imageSmoothingEnabled = false;
+  lctx.drawImage(photo.img, pt.x - sw / 2, pt.y - sw / 2, sw, sw, 0, 0, size, size);
+  lctx.strokeStyle = "#fff"; lctx.lineWidth = 1;
+  lctx.beginPath(); lctx.moveTo(size / 2, 0); lctx.lineTo(size / 2, size); lctx.moveTo(0, size / 2); lctx.lineTo(size, size / 2); lctx.stroke();
+}
+
+let drag = null;
+pc.addEventListener("pointerdown", (e) => {
+  if (!photo.img) return;
+  const r = pc.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  let hit = null, best = 30;
+  for (const set of METHODS[photo.method]) photo.pts[set].forEach((q, i) => {
+    const s = toScreen(q), d = Math.hypot(s.x - x, s.y - y);
+    if (d < best) { best = d; hit = { set, i }; }
+  });
+  const fp = toImg(x, y);
+  if (!hit) {
+    const set = activeSet();
+    if (!set || fp.x < 0 || fp.y < 0 || fp.x > photo.img.width || fp.y > photo.img.height) return;
+    photo.pts[set].push(fp);
+    hit = { set, i: photo.pts[set].length - 1 };
+  }
+  const p = photo.pts[hit.set][hit.i];
+  // Move the point relative to the finger so the finger never hides it.
+  drag = { ...hit, id: e.pointerId, dx: p.x - fp.x, dy: p.y - fp.y };
+  pc.setPointerCapture(e.pointerId);
+  drawLoupe(p, x); drawPhoto(); updatePhoto();
+  e.preventDefault();
+});
+pc.addEventListener("pointermove", (e) => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const r = pc.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const fp = toImg(x, y);
+  const p = photo.pts[drag.set][drag.i];
+  p.x = clamp(fp.x + drag.dx, 0, photo.img.width); p.y = clamp(fp.y + drag.dy, 0, photo.img.height);
+  drawLoupe(p, x); drawPhoto(); updatePhoto();
+});
+const endDrag = (e) => { if (drag && e.pointerId === drag.id) { drag = null; loupe.style.display = "none"; } };
+pc.addEventListener("pointerup", endDrag);
+pc.addEventListener("pointercancel", endDrag);
+
+$$("#p-methods [data-m]").forEach((b) => b.addEventListener("click", () => {
+  photo.method = b.dataset.m; store.set("method", photo.method);
+  buildPhotoInputs(); drawPhoto(); updatePhoto();
+}));
+$("#p-clear").addEventListener("click", () => { photo.pts = { ref: [], obj: [], cal: [] }; drawPhoto(); updatePhoto(); });
+$("#p-again").addEventListener("click", () => { photo.pts.obj = []; drawPhoto(); updatePhoto(); });
+
+function field(key, labelKey) {
+  return `<label class="f"><span>${t(labelKey)}</span><input type="text" inputmode="decimal" data-v="${key}" value="${photo.vals[key] ?? ""}"></label>`;
+}
+function buildPhotoInputs() {
+  const m = photo.method;
+  $$("#p-methods [data-m]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === m)));
+  $("#p-mdesc").textContent = t({ ref: "dRef", dist: "dDist", size: "dSize", calib: "dCalib" }[m]);
+  let h = "";
+  if (m === "ref") {
+    h += `<label class="f"><span>${t("refPreset")}</span><select id="p-preset">` +
+      PRESETS.map((p, i) => `<option value="${i}" ${+photo.vals.preset === i ? "selected" : ""}>${t(p.k)}</option>`).join("") +
+      `</select></label>`;
+    h += field("refLen", "refLen");
+  } else if (m === "dist") h += field("knownSize", "knownSize");
+  else if (m === "size") h += field("knownDist", "knownDist");
+  else h += `<div class="two">${field("calSize", "calSize")}${field("calDist", "calDist")}</div>`;
+  $("#p-inputs").innerHTML = h;
+  $$("#p-inputs [data-v]").forEach((inp) => inp.addEventListener("input", () => {
+    photo.vals[inp.dataset.v] = inp.value; store.set("vals", photo.vals);
+    if (inp.dataset.v === "refLen") { photo.vals.preset = PRESETS.length - 1; const sel = $("#p-preset"); if (sel) sel.value = String(PRESETS.length - 1); }
+    drawPhoto(); updatePhoto();
+  }));
+  const sel = $("#p-preset");
+  if (sel) sel.addEventListener("change", () => {
+    photo.vals.preset = +sel.value;
+    const v = PRESETS[+sel.value].v;
+    if (v !== null) { photo.vals.refLen = v; $('[data-v="refLen"]').value = String(v); }
+    else $('[data-v="refLen"]').focus();
+    store.set("vals", photo.vals); drawPhoto(); updatePhoto();
+  });
+}
+
+// Computes the current photo result. Lengths in metres.
+function computePhoto() {
+  const m = photo.method, F = focal();
+  if (m === "ref") {
+    const pr = pxLen("ref"), po = pxLen("obj"), L = valNum("refLen");
+    if (!pr || !po || !L) return null;
+    const val = (L / 100) * po / pr;
+    return { kind: "len", val, rel: Math.hypot(relErr(pr), relErr(po)), calib: false, px: po, minPx: Math.min(pr, po) };
+  }
+  if (m === "dist" || m === "size") {
+    const p = pxLen("obj"), k = valNum(m === "dist" ? "knownSize" : "knownDist");
+    if (!p || !k) return null;
+    const val = m === "dist" ? (F.f * (k / 100)) / p : (p * (k / 100)) / F.f;
+    const cal = F.calibrated ? CAL_REL_ERR : DEFAULT_FN_REL_ERR;
+    return { kind: m, val, rel: Math.hypot(relErr(p), cal), calib: true, px: p, minPx: p };
+  }
+  const p = pxLen("cal"), S = valNum("calSize"), D = valNum("calDist");
+  if (!p || !S || !D) return null;
+  const f = (p * D) / S;
+  return { kind: "calib", f, fn: f / Math.max(photo.img.width, photo.img.height), px: p, minPx: p, rel: relErr(p) };
+}
+function segmentLabels() {
+  const L = {};
+  const r = photo.img ? computePhoto() : null;
+  if (photo.method === "ref" && valNum("refLen")) L.ref = fmtLen(valNum("refLen") / 100);
+  if (r && r.kind !== "calib") L.obj = r.kind === "dist" ? fmtLen(valNum("knownSize") / 100) : fmtLen(r.val);
+  if (photo.method === "dist" && !r && valNum("knownSize") && photo.pts.obj.length === 2) L.obj = fmtLen(valNum("knownSize") / 100);
+  return L;
+}
+function updatePhoto() {
+  const step = $("#p-step"), res = $("#p-result");
+  const F = focal();
+  $("#p-calinfo").innerHTML = (F.calibrated ? t("calOn", { fn: num(F.fn, 4) }) : t("calOff")) +
+    (F.calibrated ? ` <button class="chip" id="p-calreset">${t("calReset")}</button>` : "");
+  const rb = $("#p-calreset");
+  if (rb) rb.addEventListener("click", () => { store.del("fn"); drawPhoto(); updatePhoto(); });
+  $("#p-again").hidden = !(photo.method === "ref" && photo.pts.obj.length === 2);
+  if (!photo.img) { step.innerHTML = t("stepCapture"); res.hidden = true; return; }
+  const set = activeSet();
+  if (set) {
+    const key = set === "ref" ? "stepRef" : set === "obj" ? "stepObj" : "stepCal";
+    step.innerHTML = t(key, { n: photo.pts[set].length });
+  } else step.innerHTML = t("stepAdjust");
+  const r = computePhoto();
+  if (!r) {
+    res.hidden = set !== null;
+    if (!set) res.innerHTML = `<div class="sub warn">${t("needInput")}</div>`;
+    return;
+  }
+  res.hidden = false;
+  const warnSmall = r.minPx < 150 ? `<div class="sub warn">${t("smallPx")}</div>` : "";
+  const warnImport = r.calib && !photo.fromCam ? `<div class="sub warn">${t("importWarn")}</div>` : "";
+  if (r.kind === "calib") {
+    res.innerHTML = `<div class="sub">${t("resCal", { f: num(r.f, 0), fn: num(r.fn, 4) })}</div>
+      <div class="sub">${t("pxInfo", { p: num(r.px, 0) })} · ± ${num(r.rel * 100, 1)} %</div>${warnSmall}
+      ${photo.fromCam ? "" : `<div class="sub warn">${t("importWarn")}</div>`}
+      <div class="row"><button class="btn primary" id="p-savecal">${t("saveCal")}</button></div>`;
+    $("#p-savecal").addEventListener("click", (ev) => {
+      store.set("fn", r.fn); ev.target.textContent = t("calSaved"); ev.target.disabled = true; updateCalInfoOnly();
+    });
+    return;
+  }
+  const title = { len: "resLen", dist: "resDist", size: "resSize" }[r.kind];
+  res.innerHTML = `<div class="sub">${t(title)}</div><div class="big">${fmtLen(r.val)}</div>
+    <div class="sub">${t(r.calib ? "errTot" : "errPoint", { e: fmtLen(r.val * r.rel) })} · ${t("pxInfo", { p: num(r.px, 0) })}</div>${warnSmall}${warnImport}`;
+}
+function updateCalInfoOnly() { const F = focal(); $("#p-calinfo").textContent = F.calibrated ? t("calOn", { fn: num(F.fn, 4) }) : t("calOff"); }
+
+/* ================= TILT MODE ================= */
+const tilt = { samples: [], dep: null, std: null, got: false, started: false, d: null, dErr: null, H: null, HErr: null };
+$("#t-h").value = store.get("camH", 150);
+$("#t-h").addEventListener("input", () => { store.set("camH", $("#t-h").value); });
+function camH() { const v = parseFloat(String($("#t-h").value).replace(",", ".")); return isFinite(v) && v > 0 ? v / 100 : null; }
+
+function onOrientation(e) {
+  if (e.beta == null) return;
+  if (!tilt.got) { tilt.got = true; $("#t-perm").hidden = true; }
+  // The rear camera looks along the device's −z axis. With W3C Euler angles,
+  // the world-vertical component of +z is cos(beta)·cos(gamma), so the camera's
+  // depression below the horizon is asin(cosβ·cosγ). Valid in portrait and landscape.
+  const s = Math.cos(e.beta * DEG) * Math.cos((e.gamma || 0) * DEG);
+  const dep = Math.asin(clamp(s, -1, 1));
+  tilt.samples.push(dep);
+  if (tilt.samples.length > 15) tilt.samples.shift();
+  const mean = tilt.samples.reduce((a, b) => a + b, 0) / tilt.samples.length;
+  tilt.std = Math.sqrt(tilt.samples.reduce((a, b) => a + (b - mean) ** 2, 0) / tilt.samples.length);
+  tilt.dep = mean;
+  renderTiltHud();
+}
+const needsSensorPermission = () => !!window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function";
+function startOrientation() {
+  if (tilt.started) return;
+  if (!window.DeviceOrientationEvent) { $("#t-hud").textContent = t("noSensor"); return; }
+  tilt.started = true;
+  // Listen right away (Android); iOS only delivers events after requestPermission() from a tap.
+  window.addEventListener("deviceorientation", onOrientation);
+  if (needsSensorPermission()) $("#t-perm").hidden = false;
+  setTimeout(() => { if (!tilt.got && !needsSensorPermission()) $("#t-hud").textContent = t("noSensor"); }, 2000);
+}
+$("#t-perm").addEventListener("click", async () => {
+  try {
+    const r = await DeviceOrientationEvent.requestPermission();
+    if (r === "granted") $("#t-perm").hidden = true;
+    else $("#t-hud").textContent = t("noSensor");
+  } catch { $("#t-hud").textContent = t("noSensor"); }
+});
+const ANG_ERR = 0.5 * DEG;
+function groundDist(dep, h) { return dep > 0.2 * DEG ? h / Math.tan(dep) : null; }
+function renderTiltHud() {
+  if (tab !== "tilt" || tilt.dep == null) return;
+  const deg = tilt.dep / DEG, h = camH();
+  let s = (deg >= 0 ? t("angleBelow", { a: num(deg, 1) }) : t("angleAbove", { a: num(-deg, 1) }));
+  s += ` · <span class="${tilt.std < 0.3 * DEG ? "ok" : "warn"}">${t(tilt.std < 0.3 * DEG ? "steady" : "unsteady")}</span>`;
+  const d = h ? groundDist(tilt.dep, h) : null;
+  if (d) {
+    s += `<br>${t("liveDist", { d: fmtLen(d) })}`;
+    if (deg < 6) s += ` <span class="warn">${t("shallow")}</span>`;
+  } else s += `<br><span class="note">${t("aimLower")}</span>`;
+  $("#t-hud").innerHTML = s;
+}
+$("#t-base").addEventListener("click", () => {
+  startOrientation();
+  const h = camH();
+  if (tilt.dep == null || !h) return;
+  const d = groundDist(tilt.dep, h);
+  if (!d) { $("#t-hud").innerHTML = t("aimLower"); return; }
+  tilt.d = d;
+  tilt.dErr = (h / Math.sin(tilt.dep) ** 2) * ANG_ERR; // |∂d/∂δ|·σδ
+  tilt.H = null;
+  $("#t-top").disabled = false;
+  updateTiltResult();
+});
+$("#t-top").addEventListener("click", () => {
+  const h = camH();
+  if (tilt.dep == null || !h || tilt.d == null) return;
+  const dt = tilt.dep; // depression of the top (negative when aiming up)
+  tilt.H = h - tilt.d * Math.tan(dt);
+  tilt.HErr = Math.hypot(Math.tan(dt) * tilt.dErr, (tilt.d / Math.cos(dt) ** 2) * ANG_ERR);
+  updateTiltResult();
+});
+function updateTiltResult() {
+  const r = $("#t-result");
+  if (tilt.d == null) { r.hidden = true; return; }
+  r.hidden = false;
+  let h = `<div class="sub">${t("tDist")}</div><div class="big">${fmtLen(tilt.d)}</div><div class="sub">${t("tErr", { e: fmtLen(tilt.dErr) })}</div>`;
+  if (tilt.H != null) h += `<div class="sub" style="margin-top:10px">${t("tHeight")}</div><div class="big">${fmtLen(tilt.H)}</div><div class="sub">${t("tErr", { e: fmtLen(tilt.HErr) })}</div>`;
+  r.innerHTML = h;
+}
+
+/* ================= AR MODE (WebXR hit-test) ================= */
+let arSupported = null, xr = null, arLast = [];
+async function refreshARSupport() {
+  const el = $("#ar-support"), btn = $("#ar-start");
+  if (arSupported === null) {
+    el.textContent = t("arChecking");
+    try { arSupported = !!(navigator.xr && await navigator.xr.isSessionSupported("immersive-ar")); } catch { arSupported = false; }
+  }
+  el.innerHTML = arSupported ? `<span class="ok">${t("arOk")}</span>` : `<span class="warn">${t("arNo")}</span>`;
+  btn.disabled = !arSupported;
+  renderARResults();
+}
+function renderARResults() {
+  const box = $("#ar-results");
+  if (!arLast.length) { box.innerHTML = ""; return; }
+  box.innerHTML = `<p class="note">${t("lastResults")}</p><ol class="list">` + arLast.map((m) => `<li>${fmtLen(m)}</li>`).join("") + "</ol>";
+}
+function mat4mul(a, b) {
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k];
+    o[c * 4 + r] = s;
+  }
+  return o;
+}
+const v3 = (p) => ({ x: p.x, y: p.y, z: p.z });
+const dist3 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+
+$("#ar-start").addEventListener("click", async () => {
+  stopCamera();
+  const overlay = $("#ar-overlay");
+  overlay.hidden = false;
+  try {
+    const session = await navigator.xr.requestSession("immersive-ar", {
+      requiredFeatures: ["hit-test", "dom-overlay"], domOverlay: { root: overlay },
+    });
+    const glc = document.createElement("canvas");
+    const gl = glc.getContext("webgl", { xrCompatible: true, alpha: true });
+    if (gl.makeXRCompatible) await gl.makeXRCompatible();
+    session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+    const refSpace = await session.requestReferenceSpace("local");
+    const viewerSpace = await session.requestReferenceSpace("viewer");
+    const hitSource = await session.requestHitTestSource({ space: viewerSpace });
+    xr = { session, gl, refSpace, hitSource, reticle: null, cam: null, pts: [], hud: "" };
+    session.addEventListener("end", () => {
+      overlay.hidden = true;
+      if (xr) { arLast = arSegments(xr.pts).map((s) => s.len); renderARResults(); }
+      xr = null;
+    });
+    session.requestAnimationFrame(onXRFrame);
+  } catch (e) {
+    overlay.hidden = true;
+    $("#ar-support").innerHTML = `<span class="err">${t("arErr", { e: e && e.message ? e.message : String(e) })}</span>`;
+  }
+});
+const overlayEl = $("#ar-overlay");
+overlayEl.addEventListener("beforexrselect", (e) => e.preventDefault());
+$("#ar-add").addEventListener("click", () => { if (xr && xr.reticle) xr.pts.push(v3(xr.reticle)); });
+$("#ar-undo").addEventListener("click", () => { if (xr) xr.pts.pop(); });
+$("#ar-clear").addEventListener("click", () => { if (xr) xr.pts = []; });
+$("#ar-exit").addEventListener("click", () => { if (xr) xr.session.end(); });
+
+function arSegments(pts) {
+  const out = [];
+  for (let i = 0; i + 1 < pts.length; i += 2) out.push({ a: pts[i], b: pts[i + 1], len: dist3(pts[i], pts[i + 1]) });
+  return out;
+}
+function onXRFrame(time, frame) {
+  if (!xr) return;
+  const session = frame.session;
+  session.requestAnimationFrame(onXRFrame);
+  const gl = xr.gl, layer = session.renderState.baseLayer;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  const pose = frame.getViewerPose(xr.refSpace);
+  if (!pose) return;
+  xr.cam = v3(pose.transform.position);
+  const hits = frame.getHitTestResults(xr.hitSource);
+  xr.reticle = hits.length ? v3(hits[0].getPose(xr.refSpace).transform.position) : null;
+  drawAR(pose.views[0]);
+}
+function drawAR(view) {
+  const cv = $("#ar-canvas"), dpr = window.devicePixelRatio || 1;
+  const W = window.innerWidth, H = window.innerHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const M = mat4mul(view.projectionMatrix, view.transform.inverse.matrix);
+  const project = (p) => {
+    const x = M[0] * p.x + M[4] * p.y + M[8] * p.z + M[12];
+    const y = M[1] * p.x + M[5] * p.y + M[9] * p.z + M[13];
+    const w = M[3] * p.x + M[7] * p.y + M[11] * p.z + M[15];
+    if (w <= 1e-4) return null;
+    return { x: (x / w * 0.5 + 0.5) * W, y: (1 - (y / w * 0.5 + 0.5)) * H };
+  };
+  const line = (a, b, color, label) => {
+    const pa = project(a), pb = project(b);
+    if (!pa || !pb) return;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(0,0,0,.6)"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+    if (label) {
+      const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+      ctx.font = "700 16px system-ui, sans-serif"; ctx.textAlign = "center";
+      const w = ctx.measureText(label).width + 14;
+      ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(mx - w / 2, my - 30, w, 24);
+      ctx.fillStyle = color; ctx.fillText(label, mx, my - 13);
+    }
+  };
+  const segs = arSegments(xr.pts);
+  segs.forEach((s) => line(s.a, s.b, "#22d3ee", fmtLen(s.len)));
+  const pending = xr.pts.length % 2 === 1 ? xr.pts[xr.pts.length - 1] : null;
+  if (pending && xr.reticle) line(pending, xr.reticle, "#f5b301", fmtLen(dist3(pending, xr.reticle)));
+  for (const p of xr.pts) {
+    const q = project(p);
+    if (!q) continue;
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // Reticle: the hit-test ray goes through the screen centre.
+  const rp = xr.reticle ? project(xr.reticle) : null;
+  const cx = rp ? rp.x : W / 2, cy = rp ? rp.y : H / 2;
+  ctx.strokeStyle = xr.reticle ? "#34d399" : "rgba(255,255,255,.6)"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, 18, 0, 2 * Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2 * Math.PI); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+  // HUD (only touch the DOM when text changes)
+  const d = xr.reticle && xr.cam ? fmtLen(dist3(xr.cam, xr.reticle)) : "—";
+  const hint = !xr.reticle ? t("arScan") : pending ? t("arPlace2") : t("arPlace1");
+  const list = segs.map((s, i) => `${t("seg", { i: i + 1 })} : <b>${fmtLen(s.len)}</b>`).join("<br>");
+  const key = d + "|" + hint + "|" + list;
+  if (key !== xr.hud) {
+    xr.hud = key;
+    $("#ar-dist").textContent = d; $("#ar-hint").textContent = hint; $("#ar-list").innerHTML = list;
+  }
+}
+
+/* ================= PWA ================= */
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $("#install").hidden = false; });
+$("#install").addEventListener("click", async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("#install").hidden = true; });
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+
+/* ================= Boot ================= */
+applyI18n();
+setTab("photo");
+</script>
+</body>
+</html>
