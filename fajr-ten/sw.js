@@ -1,5 +1,5 @@
 // Fajr Ten service worker: offline app shell + cached fonts + alarm notification clicks.
-const VERSION = "fajr-ten-v2";
+const VERSION = "fajr-ten-v3";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png"];
 
 self.addEventListener("install", (e) => {
