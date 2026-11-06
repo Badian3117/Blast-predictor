@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <Button
+            android:id="@+id/link_button"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="16dp"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/check_button"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/check" />
+
+        <TextView style="@style/Section" android:text="@string/section_link" />
+
+        <TextView style="@style/Label" android:text="@string/partner_label" />
+        <EditText
+            android:id="@+id/partner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/partner_hint"
+            android:importantForAutofill="no"
+            android:inputType="phone" />
+
+        <TextView style="@style/Label" android:text="@string/mode_label" />
+        <RadioGroup
+            android:id="@+id/mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <RadioButton android:id="@+id/mode_conditional" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="@string/mode_conditional_long" />
+            <RadioButton android:id="@+id/mode_no_answer" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="@string/mode_no_answer_long" />
+            <RadioButton android:id="@+id/mode_always" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="@string/mode_always_long" />
+        </RadioGroup>
+
+        <TextView android:id="@+id/delay_label" style="@style/Label" android:text="@string/delay_label" />
+        <Spinner
+            android:id="@+id/delay"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <TextView style="@style/Label" android:text="@string/sim_label" />
+        <Spinner
+            android:id="@+id/sim"
+            android:layout_width="match_parent"
+            android:layout_height="48dp" />
+
+        <TextView style="@style/Label" android:text="@string/voicemail_label" />
+        <EditText
+            android:id="@+id/voicemail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/voicemail_hint"
+            android:importantForAutofill="no"
+            android:inputType="phone" />
+        <TextView style="@style/Help" android:text="@string/voicemail_help" />
+
+        <TextView style="@style/Section" android:text="@string/section_remote" />
+        <Switch
+            android:id="@+id/remote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/remote_switch" />
+        <TextView style="@style/Help" android:text="@string/remote_help" />
+
+        <LinearLayout
+            android:id="@+id/remote_box"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView style="@style/Label" android:text="@string/pin_label" />
+            <EditText
+                android:id="@+id/pin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="numberPassword"
+                android:maxLength="8" />
+
+            <TextView style="@style/Label" android:text="@string/remote_control_label" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button android:id="@+id/remote_on" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="@string/remote_on" />
+                <Button android:id="@+id/remote_off" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="@string/remote_off" />
+                <Button android:id="@+id/remote_status" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="@string/remote_status" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/save" />
+
+        <TextView style="@style/Help" android:layout_marginTop="16dp" android:text="@string/tile_help" />
+    </LinearLayout>
+</ScrollView>

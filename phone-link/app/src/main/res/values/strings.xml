@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Phone Link</string>
+    <string name="tile_label">Phone Link</string>
+    <string name="tile_on">Linked</string>
+    <string name="tile_off">Off</string>
+    <string name="channel_name">Link status</string>
+
+    <string name="link">Link to my other phone</string>
+    <string name="unlink">Unlink</string>
+    <string name="check">Check with carrier</string>
+    <string name="save">Save settings</string>
+    <string name="saved">Saved</string>
+    <string name="seconds">%1$d seconds</string>
+
+    <string name="status_unlinked">Not linked. Calls ring only on this phone.</string>
+    <string name="status_linked">Linked to %1$s (%2$s), %3$s.\nYour carrier shows a message to confirm. Tap “Check with carrier” if you are not sure.</string>
+    <string name="request_sent">Request sent to your carrier. Wait for its confirmation message.</string>
+
+    <string name="section_link">Link settings</string>
+    <string name="partner_label">Other phone’s number</string>
+    <string name="partner_hint">+212 6 12 34 56 78</string>
+    <string name="mode_label">When to send calls to the other phone</string>
+    <string name="mode_conditional">unanswered, busy or unreachable</string>
+    <string name="mode_no_answer">unanswered</string>
+    <string name="mode_always">all calls</string>
+    <string name="mode_conditional_long">If unanswered, busy or unreachable (recommended)</string>
+    <string name="mode_no_answer_long">Only if unanswered (use this if your carrier rejects the first option)</string>
+    <string name="mode_always_long">All calls, without ringing this phone</string>
+    <string name="delay_label">Ring this phone for</string>
+    <string name="sim_label">SIM to use</string>
+    <string name="sim_default">Default SIM</string>
+    <string name="voicemail_label">Your voicemail number (optional)</string>
+    <string name="voicemail_hint">Ask your carrier, or leave empty</string>
+    <string name="voicemail_help">Linking replaces your carrier’s “send to voicemail” setting. With this number, unlinking puts voicemail back. Without it, unlinking turns forwarding off completely.</string>
+
+    <string name="section_remote">Remote control by SMS</string>
+    <string name="remote_switch">Allow the other phone to link or unlink this one</string>
+    <string name="remote_help">For when you left this phone behind. Install Phone Link on both phones, set the same PIN on both, and turn this on for both. Only SMS from the other phone’s number with the right PIN are accepted.</string>
+    <string name="pin_label">PIN (4–8 digits, the same on both phones)</string>
+    <string name="remote_control_label">Control the other phone</string>
+    <string name="remote_on">Link it</string>
+    <string name="remote_off">Unlink it</string>
+    <string name="remote_status">Status</string>
+    <string name="remote_sent">SMS sent. You will be notified when the other phone answers.</string>
+
+    <string name="ack_linked">Other phone: linked. Its calls will come to you.</string>
+    <string name="ack_unlinked">Other phone: not linked.</string>
+    <string name="ack_failed">Other phone could not reach its carrier. Open Phone Link on it to check permissions.</string>
+    <string name="ack_badpin">Other phone rejected the PIN. Use the same PIN on both phones.</string>
+    <string name="remote_done">Remote request handled. %1$s</string>
+    <string name="remote_bad_pin">A remote request with a wrong PIN was ignored.</string>
+    <string name="remote_ignored_disabled">A remote request was ignored because remote control is off.</string>
+
+    <string name="tile_help">Tip: add the “Phone Link” tile to your Quick Settings (swipe down, then tap the pencil) to link or unlink in one tap.</string>
+
+    <string name="err_no_partner">Enter the other phone’s number first.</string>
+    <string name="err_number">This is not a valid phone number.</string>
+    <string name="err_pin">The PIN must have 4 to 8 digits.</string>
+    <string name="err_call_permission">Allow Phone Link to make calls; it needs this to send codes to your carrier.</string>
+    <string name="err_no_telephony">This device cannot make phone calls.</string>
+    <string name="err_sms">The SMS could not be sent.</string>
+    <string name="hint_international">Tip: with two different carriers, write the number in international format (+…) to be safe.</string>
+
+    <string name="restricted_title">SMS permission blocked</string>
+    <string name="restricted_body">Android blocks SMS permissions for apps installed from outside the Play Store. To allow them: open Settings → Apps → Phone Link, tap ⋮ (top right) → “Allow restricted settings”, then turn remote control on again.</string>
+</resources>
