@@ -25,14 +25,16 @@
             android:layout_marginTop="16dp"
             android:textSize="18sp" />
 
-        <Button
-            android:id="@+id/check_button"
-            style="?android:attr/borderlessButtonStyle"
+        <TextView style="@style/Section" android:text="@string/section_method" />
+        <RadioGroup
+            android:id="@+id/method"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/check" />
-
-        <TextView style="@style/Section" android:text="@string/section_link" />
+            android:layout_height="wrap_content">
+            <RadioButton android:id="@+id/method_alert" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="@string/method_alert" />
+            <RadioButton android:id="@+id/method_forward" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="@string/method_forward" />
+        </RadioGroup>
 
         <TextView style="@style/Label" android:text="@string/partner_label" />
         <EditText
@@ -43,41 +45,127 @@
             android:importantForAutofill="no"
             android:inputType="phone" />
 
-        <TextView style="@style/Label" android:text="@string/mode_label" />
-        <RadioGroup
-            android:id="@+id/mode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <RadioButton android:id="@+id/mode_conditional" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="@string/mode_conditional_long" />
-            <RadioButton android:id="@+id/mode_no_answer" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="@string/mode_no_answer_long" />
-            <RadioButton android:id="@+id/mode_always" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="@string/mode_always_long" />
-        </RadioGroup>
-
-        <TextView android:id="@+id/delay_label" style="@style/Label" android:text="@string/delay_label" />
-        <Spinner
-            android:id="@+id/delay"
-            android:layout_width="match_parent"
-            android:layout_height="48dp" />
-
-        <TextView style="@style/Label" android:text="@string/sim_label" />
-        <Spinner
-            android:id="@+id/sim"
-            android:layout_width="match_parent"
-            android:layout_height="48dp" />
-
-        <TextView style="@style/Label" android:text="@string/voicemail_label" />
-        <EditText
-            android:id="@+id/voicemail"
+        <!-- ===== Alerts (free) ===== -->
+        <LinearLayout
+            android:id="@+id/alert_box"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/voicemail_hint"
-            android:importantForAutofill="no"
-            android:inputType="phone" />
-        <TextView style="@style/Help" android:text="@string/voicemail_help" />
+            android:orientation="vertical">
 
+            <TextView style="@style/Section" android:text="@string/section_alert" />
+            <TextView style="@style/Help" android:text="@string/alert_help" />
+
+            <TextView style="@style/Label" android:text="@string/detection_label" />
+            <TextView
+                android:id="@+id/detection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <Button
+                android:id="@+id/detection_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/detection_allow" />
+
+            <TextView style="@style/Label" android:text="@string/topic_label" />
+            <EditText
+                android:id="@+id/topic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:importantForAutofill="no"
+                android:inputType="textNoSuggestions|textVisiblePassword" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button android:id="@+id/subscribe_button" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="@string/subscribe" />
+                <Button android:id="@+id/copy_button" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="@string/copy" />
+                <Button android:id="@+id/new_topic_button" android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:text="@string/new_topic" />
+            </LinearLayout>
+            <TextView style="@style/Help" android:text="@string/topic_help" />
+
+            <TextView style="@style/Label" android:text="@string/server_label" />
+            <EditText
+                android:id="@+id/server"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:importantForAutofill="no"
+                android:inputType="textUri" />
+
+            <Switch
+                android:id="@+id/sms_fallback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:minHeight="48dp"
+                android:text="@string/sms_fallback" />
+            <TextView style="@style/Help" android:text="@string/sms_fallback_help" />
+
+            <Button
+                android:id="@+id/test_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/test_alert" />
+        </LinearLayout>
+
+        <!-- ===== Carrier forwarding ===== -->
+        <LinearLayout
+            android:id="@+id/forward_box"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView style="@style/Section" android:text="@string/section_link" />
+            <TextView style="@style/Help" android:text="@string/forward_cost_help" />
+
+            <TextView style="@style/Label" android:text="@string/mode_label" />
+            <RadioGroup
+                android:id="@+id/mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <RadioButton android:id="@+id/mode_conditional" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="@string/mode_conditional_long" />
+                <RadioButton android:id="@+id/mode_no_answer" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="@string/mode_no_answer_long" />
+                <RadioButton android:id="@+id/mode_always" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:text="@string/mode_always_long" />
+            </RadioGroup>
+
+            <TextView android:id="@+id/delay_label" style="@style/Label" android:text="@string/delay_label" />
+            <Spinner
+                android:id="@+id/delay"
+                android:layout_width="match_parent"
+                android:layout_height="48dp" />
+
+            <TextView style="@style/Label" android:text="@string/sim_label" />
+            <Spinner
+                android:id="@+id/sim"
+                android:layout_width="match_parent"
+                android:layout_height="48dp" />
+
+            <TextView style="@style/Label" android:text="@string/voicemail_label" />
+            <EditText
+                android:id="@+id/voicemail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/voicemail_hint"
+                android:importantForAutofill="no"
+                android:inputType="phone" />
+            <TextView style="@style/Help" android:text="@string/voicemail_help" />
+
+            <Button
+                android:id="@+id/check_button"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/check" />
+        </LinearLayout>
+
+        <!-- ===== Remote control ===== -->
         <TextView style="@style/Section" android:text="@string/section_remote" />
         <Switch
             android:id="@+id/remote"

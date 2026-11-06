@@ -12,9 +12,10 @@ import android.telecom.TelecomManager
 import com.badian.phonelink.core.ForwardingCodes
 import com.badian.phonelink.core.PhoneNumbers
 
-sealed interface DialResult {
-    data object Sent : DialResult
-    data class Failed(val messageRes: Int) : DialResult
+sealed interface LinkResult {
+    /** Done (alerts) or request handed to the carrier (forwarding). */
+    data object Sent : LinkResult
+    data class Failed(val messageRes: Int) : LinkResult
 }
 
 /**
@@ -24,46 +25,46 @@ sealed interface DialResult {
  */
 object Forwarder {
 
-    fun link(context: Context): DialResult {
+    fun link(context: Context): LinkResult {
         val prefs = Prefs(context)
         val target = PhoneNumbers.clean(prefs.partnerNumber)
-        if (!PhoneNumbers.isDialable(target)) return DialResult.Failed(R.string.err_no_partner)
+        if (!PhoneNumbers.isDialable(target)) return LinkResult.Failed(R.string.err_no_partner)
         val mode = prefs.mode
         val code = ForwardingCodes.activate(mode, target, prefs.delaySeconds)
         return dial(context, code).also {
-            if (it == DialResult.Sent) { prefs.markLinked(mode, target); refreshTile(context) }
+            if (it == LinkResult.Sent) { prefs.markLinked(mode, target); refreshTile(context) }
         }
     }
 
-    fun unlink(context: Context): DialResult {
+    fun unlink(context: Context): LinkResult {
         val prefs = Prefs(context)
         val mode = prefs.linkedMode ?: prefs.mode
         val code = ForwardingCodes.deactivate(mode, prefs.voicemailNumber, prefs.delaySeconds)
         return dial(context, code).also {
-            if (it == DialResult.Sent) { prefs.markUnlinked(); refreshTile(context) }
+            if (it == LinkResult.Sent) { prefs.markUnlinked(); refreshTile(context) }
         }
     }
 
-    fun checkWithCarrier(context: Context): DialResult {
+    fun checkWithCarrier(context: Context): LinkResult {
         val prefs = Prefs(context)
         return dial(context, ForwardingCodes.interrogate(prefs.linkedMode ?: prefs.mode))
     }
 
-    private fun dial(context: Context, code: String): DialResult {
+    private fun dial(context: Context, code: String): LinkResult {
         if (context.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            return DialResult.Failed(R.string.err_call_permission)
+            return LinkResult.Failed(R.string.err_call_permission)
         }
         val telecom = context.getSystemService(TelecomManager::class.java)
-            ?: return DialResult.Failed(R.string.err_no_telephony)
+            ?: return LinkResult.Failed(R.string.err_no_telephony)
         val extras = Bundle()
         accountHandle(Prefs(context).phoneAccount)?.let {
             extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, it)
         }
         return try {
             telecom.placeCall(Uri.fromParts("tel", code, null), extras)
-            DialResult.Sent
+            LinkResult.Sent
         } catch (e: SecurityException) {
-            DialResult.Failed(R.string.err_call_permission)
+            LinkResult.Failed(R.string.err_call_permission)
         }
     }
 

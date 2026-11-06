@@ -64,4 +64,43 @@
 
     <string name="restricted_title">SMS permission blocked</string>
     <string name="restricted_body">Android blocks SMS permissions for apps installed from outside the Play Store. To allow them: open Settings → Apps → Phone Link, tap ⋮ (top right) → “Allow restricted settings”, then turn remote control on again.</string>
+    <!-- Link method -->
+    <string name="section_method">How to link</string>
+    <string name="method_alert">Send an alert to my other phone (free)</string>
+    <string name="method_forward">Forward calls through my carrier (may be billed)</string>
+
+    <!-- Alerts -->
+    <string name="section_alert">Call alerts</string>
+    <string name="alert_help">While linked, every call ringing on this phone is announced on your other phone within a second or two, with the caller’s name and a “Call back” button. On the other phone, install the free ntfy app and subscribe to the topic below.</string>
+    <string name="detection_label">Incoming-call detection</string>
+    <string name="detection_ok">✓ Allowed</string>
+    <string name="detection_missing">Not allowed yet. Phone Link needs to be your “caller ID &amp; spam” app to see incoming calls. It never blocks or silences a call.</string>
+    <string name="detection_allow">Allow call detection</string>
+    <string name="topic_label">Your private topic</string>
+    <string name="subscribe">Open in ntfy</string>
+    <string name="copy">Copy</string>
+    <string name="copied">Topic copied</string>
+    <string name="new_topic">New topic</string>
+    <string name="new_topic_body">This creates a new random topic. The other phone stops receiving alerts until you subscribe it to the new topic. Use this if someone else may know your topic.</string>
+    <string name="topic_help">Anyone who knows this name can read your alerts, so keep it random and private.</string>
+    <string name="server_label">ntfy server</string>
+    <string name="sms_fallback">If there’s no internet, send an SMS instead</string>
+    <string name="sms_fallback_help">Uses the other phone’s number above. Your plan may charge for SMS.</string>
+    <string name="test_alert">Send a test alert</string>
+    <string name="test_sent">Test alert sent. It should appear on your other phone now.</string>
+    <string name="err_test">The alert could not be sent. Check the internet connection and the ntfy server.</string>
+    <string name="ntfy_missing_title">Install ntfy on the other phone</string>
+    <string name="ntfy_missing_body">The ntfy app is not installed on this phone. Alerts are received by the OTHER phone: install ntfy there, tap +, and subscribe to:\n\nServer: %1$s\nTopic: %2$s</string>
+    <string name="ntfy_get">Get ntfy</string>
+    <string name="status_alerts_on">Alerts on, %1$s.\nCalls ringing on this phone are announced on your other phone.</string>
+    <string name="alerts_on_toast">Alerts on. Calls on this phone will be announced on the other one.</string>
+    <string name="alerts_off_toast">Alerts off.</string>
+    <string name="alert_title">📞 Call on your other phone</string>
+    <string name="alert_title_test">📞 Phone Link test</string>
+    <string name="alert_private">Private number</string>
+    <string name="alert_call_back">Call back</string>
+    <string name="err_server">Enter a server address starting with https://</string>
+    <string name="err_topic">The topic may only contain letters, digits, - and _ (up to 64).</string>
+    <string name="err_call_detection">Allow call detection first.</string>
+    <string name="forward_cost_help">Your carrier sends unanswered calls to the other phone so you can pick them up there. Forwarded minutes are often billed as outgoing calls from this phone.</string>
 </resources>
