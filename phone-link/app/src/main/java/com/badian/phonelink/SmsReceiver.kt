@@ -49,8 +49,8 @@ class SmsReceiver : BroadcastReceiver() {
         }
 
         val ack = when (command.action) {
-            Action.ON -> if (Forwarder.link(context) == DialResult.Sent) Ack.LINKED else Ack.FAILED
-            Action.OFF -> if (Forwarder.unlink(context) == DialResult.Sent) Ack.UNLINKED else Ack.FAILED
+            Action.ON -> if (Link.on(context) == LinkResult.Sent) Ack.LINKED else Ack.FAILED
+            Action.OFF -> if (Link.off(context) == LinkResult.Sent) Ack.UNLINKED else Ack.FAILED
             Action.STATUS -> if (prefs.linked) Ack.LINKED else Ack.UNLINKED
         }
         Sms.send(context, sender, RemoteCommand.ack(ack), subscriptionId)

@@ -12,8 +12,8 @@ class LinkTileService : TileService() {
     override fun onStartListening() = render()
 
     override fun onClick() {
-        val result = if (Prefs(this).linked) Forwarder.unlink(this) else Forwarder.link(this)
-        if (result is DialResult.Failed) openApp()
+        val result = if (Prefs(this).linked) Link.off(this) else Link.on(this)
+        if (result is LinkResult.Failed) openApp()
         render()
     }
 

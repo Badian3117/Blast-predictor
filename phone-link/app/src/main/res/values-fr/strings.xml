@@ -64,4 +64,43 @@
 
     <string name="restricted_title">Autorisation SMS bloquée</string>
     <string name="restricted_body">Android bloque les autorisations SMS des applications installées hors du Play Store. Pour les autoriser : Paramètres → Applications → Phone Link, touchez ⋮ (en haut à droite) → « Autoriser les paramètres restreints », puis réactivez la commande à distance.</string>
+    <!-- Link method -->
+    <string name="section_method">Mode de liaison</string>
+    <string name="method_alert">Envoyer une alerte à mon autre téléphone (gratuit)</string>
+    <string name="method_forward">Renvoyer les appels via mon opérateur (peut être facturé)</string>
+
+    <!-- Alerts -->
+    <string name="section_alert">Alertes d’appel</string>
+    <string name="alert_help">Pendant la liaison, chaque appel qui sonne sur ce téléphone est annoncé sur votre autre téléphone en une ou deux secondes, avec le nom de l’appelant et un bouton « Rappeler ». Sur l’autre téléphone, installez l’application gratuite ntfy et abonnez-vous au sujet ci-dessous.</string>
+    <string name="detection_label">Détection des appels entrants</string>
+    <string name="detection_ok">✓ Autorisée</string>
+    <string name="detection_missing">Pas encore autorisée. Phone Link doit être votre application « Identification de l’appelant et spam » pour voir les appels entrants. Il ne bloque et ne coupe jamais un appel.</string>
+    <string name="detection_allow">Autoriser la détection des appels</string>
+    <string name="topic_label">Votre sujet privé</string>
+    <string name="subscribe">Ouvrir dans ntfy</string>
+    <string name="copy">Copier</string>
+    <string name="copied">Sujet copié</string>
+    <string name="new_topic">Nouveau sujet</string>
+    <string name="new_topic_body">Cela crée un nouveau sujet aléatoire. L’autre téléphone ne recevra plus d’alertes tant que vous ne l’aurez pas abonné au nouveau sujet. Utile si quelqu’un d’autre connaît peut-être votre sujet.</string>
+    <string name="topic_help">Toute personne qui connaît ce nom peut lire vos alertes : gardez-le aléatoire et privé.</string>
+    <string name="server_label">Serveur ntfy</string>
+    <string name="sms_fallback">Sans internet, envoyer un SMS à la place</string>
+    <string name="sms_fallback_help">Utilise le numéro de l’autre téléphone ci-dessus. Votre forfait peut facturer les SMS.</string>
+    <string name="test_alert">Envoyer une alerte de test</string>
+    <string name="test_sent">Alerte de test envoyée. Elle doit apparaître sur votre autre téléphone.</string>
+    <string name="err_test">L’alerte n’a pas pu être envoyée. Vérifiez la connexion internet et le serveur ntfy.</string>
+    <string name="ntfy_missing_title">Installez ntfy sur l’autre téléphone</string>
+    <string name="ntfy_missing_body">L’application ntfy n’est pas installée sur ce téléphone. Les alertes sont reçues par l’AUTRE téléphone : installez-y ntfy, touchez +, et abonnez-vous à :\n\nServeur : %1$s\nSujet : %2$s</string>
+    <string name="ntfy_get">Obtenir ntfy</string>
+    <string name="status_alerts_on">Alertes activées, %1$s.\nLes appels qui sonnent sur ce téléphone sont annoncés sur votre autre téléphone.</string>
+    <string name="alerts_on_toast">Alertes activées. Les appels sur ce téléphone seront annoncés sur l’autre.</string>
+    <string name="alerts_off_toast">Alertes désactivées.</string>
+    <string name="alert_title">📞 Appel sur votre autre téléphone</string>
+    <string name="alert_title_test">📞 Test Phone Link</string>
+    <string name="alert_private">Numéro masqué</string>
+    <string name="alert_call_back">Rappeler</string>
+    <string name="err_server">Saisissez une adresse de serveur commençant par https://</string>
+    <string name="err_topic">Le sujet ne peut contenir que des lettres, des chiffres, - et _ (64 max).</string>
+    <string name="err_call_detection">Autorisez d’abord la détection des appels.</string>
+    <string name="forward_cost_help">Votre opérateur renvoie les appels sans réponse vers l’autre téléphone pour que vous puissiez décrocher dessus. Les minutes renvoyées sont souvent facturées comme des appels sortants de ce téléphone.</string>
 </resources>

@@ -3,7 +3,13 @@
 
     <uses-feature android:name="android.hardware.telephony" android:required="true" />
 
-    <!-- Send forwarding codes (*004*…#) to the carrier. -->
+    <!-- Alerts: publish to ntfy. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Show the caller's contact name; also needed for Android to screen calls from contacts. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Android 8–9 only: the incoming number in the phone-state broadcast. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" android:maxSdkVersion="28" />
+    <!-- Forwarding: send forwarding codes (*004*…#) to the carrier. -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <!-- List the SIMs on a dual-SIM phone. -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -39,6 +45,26 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- Android 10+: told about each incoming call; never blocks or silences it. -->
+        <service
+            android:name=".CallAlertService"
+            android:exported="true"
+            android:permission="android.permission.BIND_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+
+        <!-- Android 8–9: incoming-call detection. -->
+        <receiver
+            android:name=".LegacyCallReceiver"
+            android:exported="true"
+            android:permission="android.permission.READ_PHONE_STATE">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
 
         <!-- BROADCAST_SMS: only the system can deliver to this receiver. -->
         <receiver
