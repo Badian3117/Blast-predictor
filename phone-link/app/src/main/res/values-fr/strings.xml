@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Phone Link</string>
+    <string name="tile_label">Phone Link</string>
+    <string name="tile_on">Relié</string>
+    <string name="tile_off">Désactivé</string>
+    <string name="channel_name">État de la liaison</string>
+
+    <string name="link">Relier à mon autre téléphone</string>
+    <string name="unlink">Délier</string>
+    <string name="check">Vérifier auprès de l’opérateur</string>
+    <string name="save">Enregistrer</string>
+    <string name="saved">Enregistré</string>
+    <string name="seconds">%1$d secondes</string>
+
+    <string name="status_unlinked">Non relié. Les appels sonnent uniquement sur ce téléphone.</string>
+    <string name="status_linked">Relié à %1$s (%2$s), %3$s.\nVotre opérateur affiche un message de confirmation. Touchez « Vérifier auprès de l’opérateur » en cas de doute.</string>
+    <string name="request_sent">Demande envoyée à l’opérateur. Attendez son message de confirmation.</string>
+
+    <string name="section_link">Réglages de la liaison</string>
+    <string name="partner_label">Numéro de l’autre téléphone</string>
+    <string name="partner_hint">+212 6 12 34 56 78</string>
+    <string name="mode_label">Quand envoyer les appels vers l’autre téléphone</string>
+    <string name="mode_conditional">sans réponse, occupé ou injoignable</string>
+    <string name="mode_no_answer">sans réponse</string>
+    <string name="mode_always">tous les appels</string>
+    <string name="mode_conditional_long">Si sans réponse, occupé ou injoignable (recommandé)</string>
+    <string name="mode_no_answer_long">Seulement si sans réponse (si l’opérateur refuse la première option)</string>
+    <string name="mode_always_long">Tous les appels, sans faire sonner ce téléphone</string>
+    <string name="delay_label">Faire sonner ce téléphone pendant</string>
+    <string name="sim_label">SIM à utiliser</string>
+    <string name="sim_default">SIM par défaut</string>
+    <string name="voicemail_label">Numéro de messagerie vocale (facultatif)</string>
+    <string name="voicemail_hint">Demandez-le à l’opérateur, ou laissez vide</string>
+    <string name="voicemail_help">La liaison remplace le renvoi vers la messagerie de l’opérateur. Avec ce numéro, délier remet la messagerie. Sans lui, délier coupe complètement le renvoi.</string>
+
+    <string name="section_remote">Commande à distance par SMS</string>
+    <string name="remote_switch">Autoriser l’autre téléphone à relier ou délier celui-ci</string>
+    <string name="remote_help">Pour quand vous avez laissé ce téléphone ailleurs. Installez Phone Link sur les deux téléphones, mettez le même code PIN et activez cette option sur les deux. Seuls les SMS venant du numéro de l’autre téléphone avec le bon PIN sont acceptés.</string>
+    <string name="pin_label">PIN (4 à 8 chiffres, le même sur les deux téléphones)</string>
+    <string name="remote_control_label">Commander l’autre téléphone</string>
+    <string name="remote_on">Le relier</string>
+    <string name="remote_off">Le délier</string>
+    <string name="remote_status">État</string>
+    <string name="remote_sent">SMS envoyé. Vous serez averti quand l’autre téléphone répondra.</string>
+
+    <string name="ack_linked">Autre téléphone : relié. Ses appels arriveront chez vous.</string>
+    <string name="ack_unlinked">Autre téléphone : non relié.</string>
+    <string name="ack_failed">L’autre téléphone n’a pas pu joindre son opérateur. Ouvrez Phone Link dessus pour vérifier les autorisations.</string>
+    <string name="ack_badpin">L’autre téléphone a refusé le PIN. Utilisez le même PIN sur les deux.</string>
+    <string name="remote_done">Demande à distance traitée. %1$s</string>
+    <string name="remote_bad_pin">Une demande à distance avec un mauvais PIN a été ignorée.</string>
+    <string name="remote_ignored_disabled">Une demande à distance a été ignorée car la commande à distance est désactivée.</string>
+
+    <string name="tile_help">Astuce : ajoutez la vignette « Phone Link » aux réglages rapides (glissez vers le bas, puis touchez le crayon) pour relier ou délier en un geste.</string>
+
+    <string name="err_no_partner">Saisissez d’abord le numéro de l’autre téléphone.</string>
+    <string name="err_number">Ce numéro de téléphone n’est pas valide.</string>
+    <string name="err_pin">Le PIN doit comporter 4 à 8 chiffres.</string>
+    <string name="err_call_permission">Autorisez Phone Link à passer des appels ; c’est nécessaire pour envoyer les codes à l’opérateur.</string>
+    <string name="err_no_telephony">Cet appareil ne peut pas passer d’appels.</string>
+    <string name="err_sms">Le SMS n’a pas pu être envoyé.</string>
+    <string name="hint_international">Astuce : avec deux opérateurs différents, écrivez le numéro au format international (+…) par sécurité.</string>
+
+    <string name="restricted_title">Autorisation SMS bloquée</string>
+    <string name="restricted_body">Android bloque les autorisations SMS des applications installées hors du Play Store. Pour les autoriser : Paramètres → Applications → Phone Link, touchez ⋮ (en haut à droite) → « Autoriser les paramètres restreints », puis réactivez la commande à distance.</string>
+</resources>
