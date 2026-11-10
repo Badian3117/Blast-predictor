@@ -88,108 +88,141 @@ th { font: 600 7.5pt var(--f-mono); text-transform: uppercase; letter-spacing: 0
 @media screen { body { background: #e8ebe6; } .doc { background: #fff; padding: 14mm 16mm; margin: 16px auto; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
   .page { border-top: 1px dashed var(--line); padding-top: 10mm; margin-top: 10mm; } }
 @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } .toc, .key { columns: 1; } .cover h1 { font-size: 30pt; } .doc { padding: 16px; } }
+/* French translation: smaller italic, under each English block */
+.fr { font-size: 0.86em; font-style: italic; color: #4a5450; font-weight: 400; }
+div.fr, p.fr { border-left: 1.5px solid var(--line); padding-left: 2.5mm; margin: 1mm 0 2.6mm; }
+div.fr ul, div.fr ol { margin-bottom: 1mm; }
+div.fr b { font-weight: 600; }
+h2 .fr, h3 .fr, h4 .fr { display: block; font-family: var(--f-body); text-transform: none; letter-spacing: 0; margin-top: 1mm; }
+h2 .fr { font-size: 11pt; } h3 .fr { font-size: 9.5pt; } h4 .fr { font-size: 7.5pt; }
+td .fr, li .fr, .q .fr, .formula .fr { display: block; }
+.part .fr.big { font-size: 13pt; }
 </style>
 </head>
 <body>
 <div class="doc" id="doc"></div>
 <script src="content.js"></script>
+<script src="fr-1.js"></script>
+<script src="fr-2.js"></script>
+<script src="fr-3.js"></script>
+<script src="i18n.js"></script>
 <script src="illustrations.js"></script>
 <script>
 (function () {
-  const A = window.ACADEMY, S = window.SCENES;
+  const A = window.ACADEMY, F = window.academyFor("fr"), S = window.SCENES;
+  S.lang = "en";
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const L = "ABCDEFGHIJKLMNOP";
+  /* inline pair: English text, then French in small italics */
+  const fi = (en, fr, raw = false) => `${raw ? en : esc(en)}${fr && fr !== en ? `<span class="fr">${raw ? fr : esc(fr)}</span>` : ""}`;
+  /* block pair: English block, then French block */
+  const fb = (en, fr) => `${en}${fr ? `<div class="fr">${fr}</div>` : ""}`;
+  const fp = (en, fr, raw = false) => `<p>${raw ? en : esc(en)}</p>${fr ? `<p class="fr">${raw ? fr : esc(fr)}</p>` : ""}`;
   let h = "";
 
   /* cover */
   h += `<section class="cover">
     <div><div class="band"></div></div>
-    <div><div class="eyebrow">Open-pit operations academy · Field handbook</div>
+    <div><div class="eyebrow">Open-pit operations academy · Field handbook <span class="fr">Académie des opérations à ciel ouvert · Manuel de terrain</span></div>
       <h1 style="margin-top:4mm">Bench to<br>Boardroom</h1>
-      <p class="sub" style="margin-top:4mm">From graduate engineer to project manager in six open-pit activities: load and haul, drilling, blasting, dewatering, crusher feed and grade control. Courses, field tips, exercises and end-of-cycle exams.</p></div>
+      <p class="sub" style="margin-top:4mm">From graduate engineer to project manager in six open-pit activities: load and haul, drilling, blasting, dewatering, crusher feed and grade control. Courses, field tips, exercises and end-of-cycle exams.</p>
+      <p class="sub fr">De l'ingénieur débutant au chef de projet, en six activités de mine à ciel ouvert : chargement-transport, foration, tir, exhaure, alimentation du concasseur et contrôle des teneurs. Cours, conseils de terrain, exercices et examens de fin de cycle.</p></div>
     <div>${S.hero({ animate: false })}</div>
-    <div class="meta"><div><b>Audience</b>Junior engineers on hard-rock gold operations, West Africa</div><div><b>Structure</b>3 cycles · 18 modules · 45 exam questions</div><div><b>Edition</b>1.0 · November 2026 · SI units</div></div>
+    <div class="meta"><div><b>Audience · Public</b>Junior engineers on hard-rock gold operations, West Africa<span class="fr">Jeunes ingénieurs des mines d'or en roche dure, Afrique de l'Ouest</span></div><div><b>Structure</b>3 cycles · 18 modules · 45 exam questions<span class="fr">3 cycles · 18 modules · 45 questions d'examen</span></div><div><b>Edition · Édition</b>1.1 · November 2026 · SI units · EN / FR<span class="fr">1.1 · novembre 2026 · unités SI · bilingue</span></div></div>
   </section>`;
 
   /* contents */
-  const toc = [["", "Foreword from the professor"], ["", "How the programme works"], ["", "Standards and the approval gates"]];
-  A.cycles.forEach(c => { toc.push(["Part " + ["I", "II", "III"][c.n - 1], "Cycle " + c.n + " · " + c.name]); A.activities.forEach((a, i) => toc.push([c.n + "." + (i + 1), a.name])); toc.push([c.n + ".E", "Cycle " + c.n + " exam"]); });
-  [["A", "Professor's corrections"], ["B", "Worked solutions"], ["C", "Exam answer keys"], ["D", "Formula sheet"], ["E", "Glossary English–French"], ["F", "References"]].forEach(x => toc.push(["App. " + x[0], x[1]]));
-  h += `<section class="page"><h2>Contents</h2><ol class="toc">${toc.map(t => `<li><span class="n">${t[0]}</span><span>${esc(t[1])}</span></li>`).join("")}</ol></section>`;
+  const toc = [["", "Foreword from the professor", "Avant-propos du professeur"], ["", "How the programme works", "Fonctionnement du programme"], ["", "Standards and the approval gates", "Normes et points d'autorisation"]];
+  A.cycles.forEach((c, k) => { toc.push(["Part " + ["I", "II", "III"][k], "Cycle " + c.n + " · " + c.name, "Cycle " + c.n + " · " + F.cycles[k].name]); A.activities.forEach((a, i) => toc.push([c.n + "." + (i + 1), a.name, F.activities[i].name])); toc.push([c.n + ".E", "Cycle " + c.n + " exam", "Examen du cycle " + c.n]); });
+  [["A", "Professor's corrections", "Corrections du professeur"], ["B", "Worked solutions", "Solutions détaillées"], ["C", "Exam answer keys", "Corrigés des examens"], ["D", "Formula sheet", "Formulaire"], ["E", "Glossary English–French", "Glossaire anglais–français"], ["F", "References", "Références"]].forEach(x => toc.push(["App. " + x[0], x[1], x[2]]));
+  h += `<section class="page"><h2>${fi("Contents", "Sommaire")}</h2><ol class="toc">${toc.map(x => `<li><span class="n">${x[0]}</span><span>${fi(x[1], x[2])}</span></li>`).join("")}</ol></section>`;
 
   /* foreword */
-  h += `<section class="page"><div class="eyebrow">Foreword</div><h2>From the professor</h2>
-    <p>An open pit is a factory with no roof, run by people who rotate every month, on ground that changes with every blast and every rainy season. The engineer who succeeds there is not the one who knows the most formulas. It is the one who checks the numbers, records what really happened, understands what the next activity downstream needs, and has the confidence to stop a job that is wrong.</p>
-    <p>This handbook follows the material through the pit. Grade control decides what is ore. Drilling puts the holes where the design says. Blasting breaks the rock to a size the fleet and the crusher can handle. Dewatering keeps water from ruining all three. Load and haul moves the rock. Crusher feed is where the mine's tonnes become the company's ounces. Every activity is a customer of the one before it.</p>
-    <p>The programme climbs three cycles. As an <b>Engineer</b> you learn to execute and measure. As a <b>Senior Engineer</b> you turn measurements into better designs and standards. As a <b>Project Manager</b> you are accountable for the contract: safety, schedule, cost, people and the client relationship. The technical content does not disappear at the top; it becomes the evidence for commercial decisions.</p>
-    <p>Two rules run through every chapter. First, <b>state your units and your assumptions</b>: most site errors are unit errors and unstated assumptions (Appendix A lists the most common ones). Second, <b>respect the gates</b>: no loading without as-drilled sign-off, no change without a variation, no blast without clearance. Gates protect people first and contracts second.</p>
-    <p>Work every exercise with a calculator before reading the solution. Then repeat it with your own site's numbers. That is where the learning happens.</p>
-    <div class="box prof" style="margin-top:6mm"><h4>A word on examples</h4><p style="margin:0">Numbers in this handbook are teaching values typical of hard-rock gold pits in West Africa (115 mm holes, 10 m benches, 90 t trucks, a single wet season of 1 300–1 800 mm). They are not site design values. Your site's approved designs, SOPs and national regulations always take precedence.</p></div>
+  const fw = [
+    ["An open pit is a factory with no roof, run by people who rotate every month, on ground that changes with every blast and every rainy season. The engineer who succeeds there is not the one who knows the most formulas. It is the one who checks the numbers, records what really happened, understands what the next activity downstream needs, and has the confidence to stop a job that is wrong.",
+     "Une mine à ciel ouvert est une usine sans toit, exploitée par des équipes qui tournent chaque mois, sur un terrain qui change à chaque tir et à chaque saison des pluies. L'ingénieur qui y réussit n'est pas celui qui connaît le plus de formules. C'est celui qui vérifie les chiffres, enregistre ce qui s'est réellement passé, comprend ce dont l'activité suivante a besoin, et ose arrêter un travail qui n'est pas conforme."],
+    ["This handbook follows the material through the pit. Grade control decides what is ore. Drilling puts the holes where the design says. Blasting breaks the rock to a size the fleet and the crusher can handle. Dewatering keeps water from ruining all three. Load and haul moves the rock. Crusher feed is where the mine's tonnes become the company's ounces. Every activity is a customer of the one before it.",
+     "Ce manuel suit la matière à travers la fosse. Le contrôle des teneurs décide de ce qui est du minerai. La foration place les trous là où le plan l'indique. Le tir fragmente la roche à une taille que la flotte et le concasseur peuvent traiter. L'exhaure empêche l'eau de compromettre ces trois activités. Le chargement-transport déplace la roche. L'alimentation du concasseur est le point où les tonnes de la mine deviennent les onces de l'entreprise. Chaque activité est le client de celle qui la précède."],
+    ["The programme climbs three cycles. As an <b>Engineer</b> you learn to execute and measure. As a <b>Senior Engineer</b> you turn measurements into better designs and standards. As a <b>Project Manager</b> you are accountable for the contract: safety, schedule, cost, people and the client relationship. The technical content does not disappear at the top; it becomes the evidence for commercial decisions.",
+     "Le programme monte en trois cycles. <b>Ingénieur</b> : vous apprenez à exécuter et à mesurer. <b>Ingénieur senior</b> : vous transformez les mesures en meilleures conceptions et en standards. <b>Chef de projet</b> : vous répondez du contrat : sécurité, planning, coûts, personnel et relation client. Le contenu technique ne disparaît pas au sommet ; il devient la preuve des décisions commerciales."],
+    ["Two rules run through every chapter. First, <b>state your units and your assumptions</b>: most site errors are unit errors and unstated assumptions (Appendix A lists the most common ones). Second, <b>respect the gates</b>: no loading without as-drilled sign-off, no change without a variation, no blast without clearance. Gates protect people first and contracts second.",
+     "Deux règles traversent chaque chapitre. D'abord, <b>précisez vos unités et vos hypothèses</b> : la plupart des erreurs de site sont des erreurs d'unités et des hypothèses non dites (l'annexe A recense les plus fréquentes). Ensuite, <b>respectez les points d'autorisation</b> : pas de chargement sans validation du foré réel, pas de modification sans avenant, pas de tir sans évacuation. Ces points protègent d'abord les personnes, ensuite les contrats."],
+    ["Work every exercise with a calculator before reading the solution. Then repeat it with your own site's numbers. That is where the learning happens.",
+     "Faites chaque exercice à la calculatrice avant de lire la solution. Refaites-le ensuite avec les chiffres de votre site. C'est là que l'on apprend."]
+  ];
+  h += `<section class="page"><div class="eyebrow">Foreword · Avant-propos</div><h2>${fi("From the professor", "Le mot du professeur")}</h2>
+    ${fw.map(x => fp(x[0], x[1], true)).join("")}
+    <div class="box prof" style="margin-top:5mm"><h4>${fi("A word on examples", "À propos des exemples")}</h4>${fp("Numbers in this handbook are teaching values typical of hard-rock gold pits in West Africa (115 mm holes, 10 m benches, 90 t trucks, a single wet season of 1 300–1 800 mm). They are not site design values. Your site's approved designs, SOPs and national regulations always take precedence.", "Les chiffres de ce manuel sont des valeurs pédagogiques typiques des mines d'or en roche dure d'Afrique de l'Ouest (trous de 115 mm, gradins de 10 m, camions de 90 t, une seule saison des pluies de 1 300–1 800 mm). Ce ne sont pas des valeurs de conception. Les plans approuvés de votre site, ses procédures et la réglementation nationale priment toujours.")}</div>
   </section>`;
 
   /* how it works */
-  h += `<section class="page"><div class="eyebrow">Programme</div><h2>How the programme works</h2>
-    <p>Each cycle contains six modules, one per activity. Each module has four parts: a <b>course</b> (principles, formulas and standards), <b>field tips</b>, a graded <b>exercise</b> and a <b>field tool</b> (a calculator in the interactive version). A cycle ends with a 15-question exam; the pass mark is 80%. Passing unlocks the next cycle's exam. Courses are open at all levels.</p>
-    <table><thead><tr><th>Cycle</th><th>Experience</th><th>Role</th><th>Competencies assessed</th></tr></thead><tbody>
-    ${A.cycles.map(c => `<tr><td><b>${c.n} · ${esc(c.name)}</b></td><td>${esc(c.years)}</td><td>${esc(c.role)}</td><td>${c.competencies.map(esc).join("; ")}</td></tr>`).join("")}</tbody></table>
-    <h3>Module map</h3>
-    <table><thead><tr><th>Activity</th>${A.cycles.map(c => `<th>Cycle ${c.n} · ${esc(c.name)}</th>`).join("")}</tr></thead><tbody>
-    ${A.activities.map(a => `<tr><td><b>${esc(a.name)}</b><br><span class="small">${esc(a.fr)}</span></td>${A.cycles.map(c => `<td>${esc(A.modules[c.id][a.id].title)}</td>`).join("")}</tr>`).join("")}</tbody></table>
-    <h3>Assessment</h3>
-    <ul><li>Exercises are answered to a stated tolerance; the interactive tool marks them automatically.</li><li>Exams: 15 multiple-choice questions, 80% to pass, explanations shown after submission. Answer keys for instructors are in Appendix C.</li><li>A passed exam is a knowledge check. Field competence is signed off by a supervisor against the site's competency register.</li></ul>
+  h += `<section class="page"><div class="eyebrow">Programme</div><h2>${fi("How the programme works", "Fonctionnement du programme")}</h2>
+    ${fp("Each cycle contains six modules, one per activity. Each module has four parts: a <b>course</b> (principles, formulas and standards), <b>field tips</b>, a graded <b>exercise</b> and a <b>field tool</b> (a calculator in the interactive version). A cycle ends with a 15-question exam; the pass mark is 80%. Passing unlocks the next cycle's exam. Courses are open at all levels.", "Chaque cycle comprend six modules, un par activité. Chaque module a quatre parties : un <b>cours</b> (principes, formules et normes), des <b>conseils de terrain</b>, un <b>exercice</b> noté et un <b>outil de terrain</b> (un calculateur dans la version interactive). Un cycle se termine par un examen de 15 questions ; le seuil de réussite est de 80 %. La réussite débloque l'examen du cycle suivant. Les cours sont ouverts à tous les niveaux.", true)}
+    <table><thead><tr><th>Cycle</th><th>${fi("Experience", "Expérience")}</th><th>${fi("Role", "Rôle")}</th><th>${fi("Competencies assessed", "Compétences évaluées")}</th></tr></thead><tbody>
+    ${A.cycles.map((c, k) => `<tr><td><b>${c.n} · ${fi(c.name, F.cycles[k].name)}</b></td><td>${fi(c.years, F.cycles[k].years)}</td><td>${fi(c.role, F.cycles[k].role)}</td><td>${fi(c.competencies.join("; "), F.cycles[k].competencies.join(" ; "))}</td></tr>`).join("")}</tbody></table>
+    <h3>${fi("Module map", "Carte des modules")}</h3>
+    <table><thead><tr><th>${fi("Activity", "Activité")}</th>${A.cycles.map((c, k) => `<th>Cycle ${c.n} · ${fi(c.name, F.cycles[k].name)}</th>`).join("")}</tr></thead><tbody>
+    ${A.activities.map((a, i) => `<tr><td><b>${fi(a.name, F.activities[i].name)}</b></td>${A.cycles.map(c => `<td>${fi(A.modules[c.id][a.id].title, F.modules[c.id][a.id].title)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+    <h3>${fi("Assessment", "Évaluation")}</h3>
+    <ul>${[["Exercises are answered to a stated tolerance; the interactive tool marks them automatically.", "Les exercices sont corrigés à une tolérance donnée ; l'outil interactif les note automatiquement."], ["Exams: 15 multiple-choice questions, 80% to pass, explanations shown after submission. Answer keys for instructors are in Appendix C.", "Examens : 15 questions à choix multiple, 80 % pour réussir, explications affichées après validation. Les corrigés pour les formateurs sont à l'annexe C."], ["A passed exam is a knowledge check. Field competence is signed off by a supervisor against the site's competency register.", "Un examen réussi valide des connaissances. La compétence de terrain est validée par un superviseur selon le registre des compétences du site."]].map(x => `<li>${fi(x[0], x[1])}</li>`).join("")}</ul>
   </section>`;
 
   /* standards & gates */
-  const gates = [["1", "Pre-drill input", "Submit pattern design", "Approve layout & bench release", "Signed layout drawing"], ["2", "Drilling", "Drill per approved pattern", "—", "Drill log, as-drilled data"], ["3", "As-drilled survey", "Submit as-drilled report", "Sign off depths", "Signed as-drilled record"], ["4", "Loading authorisation", "Submit blast design and MIC calculation", "Issue written authorisation", "Loading authorisation"], ["5", "Pre-blast inspection", "Conduct and document", "Witness or accept", "Pre-blast checklist"], ["6", "Blast execution", "Fire per approved sequence", "Issue all-clear", "Blast log"], ["7", "Post-blast inspection", "Conduct and document", "Accept or raise NCR", "Post-blast report"], ["8", "Closeout", "Submit blast record", "Sign off", "Blast register entry"]];
-  h += `<section class="page"><div class="eyebrow">Framework</div><h2>Standards and the approval gates</h2>
-    <h3>Hierarchy of standards</h3>
-    <ol><li><b>National law</b>: mining code, explosives regulations, licensing, magazine permits, transport and notification. Legal precedence.</li><li><b>ISEE</b> practice for blast design, safety and exclusion zones.</li><li><b>USBM</b>: RI 8507 (ground vibration) and RI 8485 (airblast).</li><li><b>Supplier technical standards</b> for products and initiation systems.</li><li><b>Site SOPs</b> and the owner's procedures.</li></ol>
-    <p>Where the law is silent, apply the stricter of the others.</p>
-    <h3>The eight drill-and-blast gates (contractor–owner)</h3>
-    <table class="gates"><thead><tr><th>#</th><th>Phase</th><th>Contractor</th><th>Owner</th><th>Output document</th></tr></thead><tbody>${gates.map(g => `<tr>${g.map(x => `<td>${esc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table>
-    <div class="box prof"><h4>Professor's rule</h4><p style="margin:0">A verbal instruction that skips a gate ("load it, we will sign later") is recorded in writing the same day and not executed until confirmed. The as-drilled sign-off before loading is a safety gate and a contractual boundary at the same time.</p></div>
+  const gates = [["1", "Pre-drill input", "Submit pattern design", "Approve layout & bench release", "Signed layout drawing", "Avant foration", "Soumettre le plan de maille", "Approuver l'implantation et libérer le gradin", "Plan d'implantation signé"], ["2", "Drilling", "Drill per approved pattern", "—", "Drill log, as-drilled data", "Foration", "Forer selon la maille approuvée", "—", "Journal de foration, foré réel"], ["3", "As-drilled survey", "Submit as-drilled report", "Sign off depths", "Signed as-drilled record", "Levé du foré réel", "Soumettre le rapport du foré réel", "Valider les profondeurs", "Foré réel signé"], ["4", "Loading authorisation", "Submit blast design and MIC calculation", "Issue written authorisation", "Loading authorisation", "Autorisation de chargement", "Soumettre le plan de tir et le calcul de CUIM", "Délivrer l'autorisation écrite", "Autorisation de chargement"], ["5", "Pre-blast inspection", "Conduct and document", "Witness or accept", "Pre-blast checklist", "Inspection avant tir", "Réaliser et documenter", "Assister ou accepter", "Liste de contrôle avant tir"], ["6", "Blast execution", "Fire per approved sequence", "Issue all-clear", "Blast log", "Exécution du tir", "Tirer selon la séquence approuvée", "Donner la fin d'alerte", "Journal de tir"], ["7", "Post-blast inspection", "Conduct and document", "Accept or raise NCR", "Post-blast report", "Inspection après tir", "Réaliser et documenter", "Accepter ou émettre une NC", "Rapport après tir"], ["8", "Closeout", "Submit blast record", "Sign off", "Blast register entry", "Clôture", "Soumettre le dossier de tir", "Valider", "Inscription au registre des tirs"]];
+  const hier = [["<b>National law</b>: mining code, explosives regulations, licensing, magazine permits, transport and notification. Legal precedence.", "<b>Loi nationale</b> : code minier, réglementation des explosifs, licences, autorisations de dépôts, transport et déclarations. Prévaut juridiquement."], ["<b>ISEE</b> practice for blast design, safety and exclusion zones.", "Pratique <b>ISEE</b> pour la conception des tirs, la sécurité et les zones d'exclusion."], ["<b>USBM</b>: RI 8507 (ground vibration) and RI 8485 (airblast).", "<b>USBM</b> : RI 8507 (vibrations du sol) et RI 8485 (surpression aérienne)."], ["<b>Supplier technical standards</b> for products and initiation systems.", "<b>Standards techniques du fournisseur</b> pour les produits et systèmes d'amorçage."], ["<b>Site SOPs</b> and the owner's procedures.", "<b>Procédures du site</b> et procédures du propriétaire."]];
+  h += `<section class="page"><div class="eyebrow">Framework · Cadre</div><h2>${fi("Standards and the approval gates", "Normes et points d'autorisation")}</h2>
+    <h3>${fi("Hierarchy of standards", "Hiérarchie des normes")}</h3>
+    <ol>${hier.map(x => `<li>${fi(x[0], x[1], true)}</li>`).join("")}</ol>
+    ${fp("Where the law is silent, apply the stricter of the others.", "Là où la loi est muette, appliquez la plus stricte des autres références.")}
+    <h3>${fi("The eight drill-and-blast gates (contractor–owner)", "Les huit points d'autorisation forage-tir (entrepreneur–propriétaire)")}</h3>
+    <table class="gates"><thead><tr><th>#</th><th>${fi("Phase", "Phase")}</th><th>${fi("Contractor", "Entrepreneur")}</th><th>${fi("Owner", "Propriétaire")}</th><th>${fi("Output document", "Document produit")}</th></tr></thead><tbody>${gates.map(g => `<tr><td>${g[0]}</td>${[1, 2, 3, 4].map(i => `<td>${fi(g[i], g[i + 4])}</td>`).join("")}</tr>`).join("")}</tbody></table>
+    <div class="box prof"><h4>${fi("Professor's rule", "Règle du professeur")}</h4>${fp("A verbal instruction that skips a gate (\"load it, we will sign later\") is recorded in writing the same day and not executed until confirmed. The as-drilled sign-off before loading is a safety gate and a contractual boundary at the same time.", "Une instruction verbale qui saute un point d'autorisation (« chargez, nous signerons plus tard ») est consignée par écrit le jour même et n'est pas exécutée avant confirmation. La validation du foré réel avant chargement est à la fois un point d'arrêt sécurité et une limite contractuelle.")}</div>
   </section>`;
 
   /* parts */
-  A.cycles.forEach(c => {
-    h += `<section class="page part"><div class="num">0${c.n}</div><div class="eyebrow">Part ${["I", "II", "III"][c.n - 1]} · Cycle ${c.n} · ${esc(c.years)}</div><h2>${esc(c.name)}</h2><p style="font-size:12pt;max-width:140mm">${esc(c.role)}</p><p style="max-width:140mm"><b>Goal of the cycle.</b> ${esc(c.goal)}</p><ul class="comp">${c.competencies.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>`;
+  A.cycles.forEach((c, k) => {
+    const fc = F.cycles[k];
+    h += `<section class="page part"><div class="num">0${c.n}</div><div class="eyebrow">Part ${["I", "II", "III"][k]} · Cycle ${c.n} · ${esc(c.years)} <span class="fr">Partie ${["I", "II", "III"][k]} · ${esc(fc.years)}</span></div><h2>${fi(c.name, fc.name)}</h2>
+      <p style="font-size:12pt;max-width:140mm">${esc(c.role)}</p><p class="fr big" style="max-width:140mm">${esc(fc.role)}</p>
+      <p style="max-width:140mm"><b>Goal of the cycle.</b> ${esc(c.goal)}</p><p class="fr" style="max-width:140mm"><b>Objectif du cycle.</b> ${esc(fc.goal)}</p>
+      <ul class="comp">${c.competencies.map((x, i) => `<li>${fi(x, fc.competencies[i])}</li>`).join("")}</ul></section>`;
     A.activities.forEach((a, i) => {
-      const m = A.modules[c.id][a.id];
-      h += `<section class="page"><div class="chap-head"><h2>${c.n}.${i + 1} ${esc(a.name)}</h2><span class="eyebrow">${esc(a.fr)} · Cycle ${c.n}</span></div>
-        <h3 style="margin-top:0">${esc(m.title)}</h3>
+      const m = A.modules[c.id][a.id], f = F.modules[c.id][a.id];
+      h += `<section class="page"><div class="chap-head"><h2>${c.n}.${i + 1} ${esc(a.name)}</h2><span class="eyebrow">${esc(F.activities[i].name)} · Cycle ${c.n}</span></div>
+        <h3 style="margin-top:0">${fi(m.title, f.title)}</h3>
         ${c.n === 1 ? S[a.id]({ animate: false }) : ""}
         <div class="cols"><div>
-          <div class="box"><h4>Learning objectives</h4><ul class="comp">${m.objectives.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>
-          ${m.lessons.map(l => `<div><h3>${l.h}</h3>${l.body}</div>`).join("")}
+          <div class="box"><h4>${fi("Learning objectives", "Objectifs pédagogiques")}</h4><ul class="comp">${m.objectives.map((o, j) => `<li>${fi(o, f.objectives[j])}</li>`).join("")}</ul></div>
+          ${m.lessons.map((l, j) => `<div><h3>${fi(l.h, f.lessons[j].h, true)}</h3>${fb(l.body, f.lessons[j].body)}</div>`).join("")}
         </div><div>
-          <div class="box"><h4>Formula card</h4>${m.formulas.map(f => `<div class="formula"><span class="n">${f.name}</span><span class="f">${f.f}</span>${f.note ? `<span class="n">${f.note}</span>` : ""}</div>`).join("")}</div>
-          <div class="box"><h4>Field tips</h4><ol class="tips">${m.tips.map(t => `<li>${t}</li>`).join("")}</ol></div>
-          <div class="box prof"><h4>Professor's note</h4><p style="margin:0">${esc(m.prof)}</p></div>
+          <div class="box"><h4>${fi("Formula card", "Fiche formules")}</h4>${m.formulas.map((x, j) => `<div class="formula"><span class="n">${fi(x.name, f.formulas[j].name, true)}</span><span class="f">${x.f}</span>${x.note ? `<span class="n">${fi(x.note, f.formulas[j].note, true)}</span>` : ""}</div>`).join("")}</div>
+          <div class="box"><h4>${fi("Field tips", "Conseils de terrain")}</h4><ol class="tips">${m.tips.map((x, j) => `<li>${fi(x, f.tips[j], true)}</li>`).join("")}</ol></div>
+          <div class="box prof"><h4>${fi("Professor's note", "Note du professeur")}</h4>${fp(m.prof, f.prof)}</div>
         </div></div>
-        <div class="ex"><h4>Exercise ${c.n}.${i + 1}</h4><p>${esc(m.exercise.intro)}</p><ol>${m.exercise.parts.map(p => `<li>${esc(p.q)} <span class="answer-line"></span> ${esc(p.unit)}</li>`).join("")}</ol><p class="small" style="margin:0">Worked solution: Appendix B, ${c.n}.${i + 1}.</p></div>
+        <div class="ex"><h4>${fi("Exercise " + c.n + "." + (i + 1), "Exercice " + c.n + "." + (i + 1))}</h4>${fp(m.exercise.intro, f.exercise.intro)}<ol>${m.exercise.parts.map((p, j) => `<li>${esc(p.q)} <span class="answer-line"></span> ${esc(p.unit)}<span class="fr">${esc(f.exercise.parts[j].q)}</span></li>`).join("")}</ol><p class="small" style="margin:0">${fi("Worked solution: Appendix B, " + c.n + "." + (i + 1) + ".", "Solution détaillée : annexe B, " + c.n + "." + (i + 1) + ".")}</p></div>
       </section>`;
     });
-    h += `<section class="page"><div class="chap-head"><h2>${c.n}.E Cycle ${c.n} exam</h2><span class="eyebrow">15 questions · pass 80% (12/15)</span></div>
-      ${A.exams[c.id].map((q, i) => `<div class="q"><b>${i + 1}. ${esc(q.q)}</b><ol>${q.o.map(o => `<li>${esc(o)}</li>`).join("")}</ol></div>`).join("")}</section>`;
+    h += `<section class="page"><div class="chap-head"><h2>${c.n}.E ${fi("Cycle " + c.n + " exam", "Examen du cycle " + c.n)}</h2><span class="eyebrow">15 questions · pass 80% (12/15) <span class="fr">réussite 80 % (12/15)</span></span></div>
+      ${A.exams[c.id].map((q, i) => { const fq = F.exams[c.id][i]; return `<div class="q"><b>${i + 1}. ${esc(q.q)}</b><span class="fr">${esc(fq.q)}</span><ol>${q.o.map((o, j) => `<li>${fi(o, fq.o[j])}</li>`).join("")}</ol></div>`; }).join("")}</section>`;
   });
 
   /* appendices */
-  h += `<section class="page corr"><div class="eyebrow">Appendix A</div><h2>Professor's corrections</h2><p>Statements heard on real sites, and why they are wrong. Each one can cause an unsafe design or a lost argument with a client.</p>
-    ${A.corrections.map(x => `<div class="box"><p class="claim">${esc(x.claim)}</p><p style="margin:0">${esc(x.fix)}</p></div>`).join("")}</section>`;
-  h += `<section class="page"><div class="eyebrow">Appendix B</div><h2>Worked solutions</h2>
-    ${A.cycles.map(c => A.activities.map((a, i) => { const ex = A.modules[c.id][a.id].exercise; return `<div class="sol"><h4>${c.n}.${i + 1} · ${esc(a.name)} · answers: ${ex.parts.map((p, j) => `${"abcdefgh"[j]}) ${p.ans.toLocaleString("en-US")} ${esc(p.unit)}`).join(" · ")}</h4>${ex.solution}</div>`; }).join("")).join("")}</section>`;
-  h += `<section class="page"><div class="eyebrow">Appendix C · instructors</div><h2>Exam answer keys</h2>
-    ${A.cycles.map(c => `<h3>Cycle ${c.n} · ${esc(c.name)}</h3><div class="key">${A.exams[c.id].map((q, i) => `<div>${String(i + 1).padStart(2, "0")} · ${L[q.a]}</div>`).join("")}</div><table><thead><tr><th>#</th><th>Explanation</th></tr></thead><tbody>${A.exams[c.id].map((q, i) => `<tr><td>${i + 1}</td><td>${esc(q.why)}</td></tr>`).join("")}</tbody></table>`).join("")}</section>`;
-  h += `<section class="page"><div class="eyebrow">Appendix D</div><h2>Formula sheet</h2>
-    <table><thead><tr><th>Activity</th><th>Quantity</th><th>Formula</th><th>Units / notes</th></tr></thead><tbody>
-    ${A.cycles.map(c => A.activities.map(a => A.modules[c.id][a.id].formulas.map(f => `<tr><td>${esc(a.name)} · C${c.n}</td><td>${f.name}</td><td style="font-family:var(--f-mono)">${f.f}</td><td>${f.note || ""}</td></tr>`).join("")).join("")).join("")}</tbody></table>
-    <h3>Constants and conversions</h3><table><tbody>
-    <tr><td>1 troy ounce</td><td>31.1035 g</td></tr><tr><td>1 ha</td><td>10 000 m²</td></tr><tr><td>1 L/s</td><td>3.6 m³/h</td></tr><tr><td>g</td><td>9.81 m/s²</td></tr>
-    <tr><td>USBM vibration, imperial → metric</td><td>k 160 (in/s, ft/lb½) ≈ k 1 140 (mm/s, m/kg½), β unchanged</td></tr><tr><td>Konya timing, per ft → per m</td><td>× 3.28</td></tr></tbody></table></section>`;
-  h += `<section class="page"><div class="eyebrow">Appendix E</div><h2>Glossary English–French</h2>
-    <table><thead><tr><th>English</th><th>Français</th><th>Definition</th></tr></thead><tbody>${A.glossary.map(g => `<tr><td><b>${esc(g[0])}</b></td><td>${esc(g[1])}</td><td>${esc(g[2])}</td></tr>`).join("")}</tbody></table></section>`;
-  h += `<section class="page"><div class="eyebrow">Appendix F</div><h2>References</h2><ol>${A.references.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
-    <p class="small" style="margin-top:6mm">This handbook is a training document. It does not replace site-approved designs, procedures, supplier instructions or national regulations.</p></section>`;
+  h += `<section class="page corr"><div class="eyebrow">Appendix A · Annexe A</div><h2>${fi("Professor's corrections", "Corrections du professeur")}</h2>${fp("Statements heard on real sites, and why they are wrong. Each one can cause an unsafe design or a lost argument with a client.", "Affirmations entendues sur de vrais sites, et pourquoi elles sont fausses. Chacune peut conduire à une conception dangereuse ou à un litige perdu avec un client.")}
+    ${A.corrections.map((x, i) => `<div class="box"><p class="claim">${esc(x.claim)}</p><p class="claim fr">${esc(F.corrections[i].claim)}</p>${fp(x.fix, F.corrections[i].fix)}</div>`).join("")}</section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix B · Annexe B</div><h2>${fi("Worked solutions", "Solutions détaillées")}</h2>
+    ${A.cycles.map(c => A.activities.map((a, i) => { const ex = A.modules[c.id][a.id].exercise, fx = F.modules[c.id][a.id].exercise; return `<div class="sol"><h4>${c.n}.${i + 1} · ${esc(a.name)} · ${esc(F.activities[i].name)} — ${ex.parts.map((p, j) => `${"abcdefgh"[j]}) ${p.ans.toLocaleString("en-US")} ${esc(p.unit)}`).join(" · ")}</h4>${fb(ex.solution, fx.solution)}</div>`; }).join("")).join("")}</section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix C · Annexe C · instructors / formateurs</div><h2>${fi("Exam answer keys", "Corrigés des examens")}</h2>
+    ${A.cycles.map((c, k) => `<h3>Cycle ${c.n} · ${fi(c.name, F.cycles[k].name)}</h3><div class="key">${A.exams[c.id].map((q, i) => `<div>${String(i + 1).padStart(2, "0")} · ${L[q.a]}</div>`).join("")}</div><table><thead><tr><th>#</th><th>${fi("Explanation", "Explication")}</th></tr></thead><tbody>${A.exams[c.id].map((q, i) => `<tr><td>${i + 1}</td><td>${fi(q.why, F.exams[c.id][i].why)}</td></tr>`).join("")}</tbody></table>`).join("")}</section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix D · Annexe D</div><h2>${fi("Formula sheet", "Formulaire")}</h2>
+    <table><thead><tr><th>${fi("Activity", "Activité")}</th><th>${fi("Quantity", "Grandeur")}</th><th>${fi("Formula", "Formule")}</th><th>${fi("Units / notes", "Unités / notes")}</th></tr></thead><tbody>
+    ${A.cycles.map(c => A.activities.map((a, i) => A.modules[c.id][a.id].formulas.map((x, j) => { const fx = F.modules[c.id][a.id].formulas[j]; return `<tr><td>${fi(a.name, F.activities[i].name)} · C${c.n}</td><td>${fi(x.name, fx.name, true)}</td><td style="font-family:var(--f-mono)">${x.f}</td><td>${x.note ? fi(x.note, fx.note, true) : ""}</td></tr>`; }).join("")).join("")).join("")}</tbody></table>
+    <h3>${fi("Constants and conversions", "Constantes et conversions")}</h3><table><tbody>
+    <tr><td>${fi("1 troy ounce", "1 once troy")}</td><td>31.1035 g</td></tr><tr><td>1 ha</td><td>10 000 m²</td></tr><tr><td>1 L/s</td><td>3.6 m³/h</td></tr><tr><td>g</td><td>9.81 m/s²</td></tr>
+    <tr><td>${fi("USBM vibration, imperial → metric", "Vibrations USBM, impérial → métrique")}</td><td>${fi("k 160 (in/s, ft/lb½) ≈ k 1 140 (mm/s, m/kg½), β unchanged", "k 160 (in/s, ft/lb½) ≈ k 1 140 (mm/s, m/kg½), β inchangé")}</td></tr><tr><td>${fi("Konya timing, per ft → per m", "Séquence de Konya, par ft → par m")}</td><td>× 3.28</td></tr></tbody></table></section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix E · Annexe E</div><h2>${fi("Glossary English–French", "Glossaire anglais–français")}</h2>
+    <table><thead><tr><th>English</th><th>Français</th><th>Definition</th></tr></thead><tbody>${A.glossary.map(g => `<tr><td><b>${esc(g[0])}</b></td><td><i>${esc(g[1])}</i></td><td>${esc(g[2])}</td></tr>`).join("")}</tbody></table></section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix F · Annexe F</div><h2>${fi("References", "Références")}</h2><ol>${A.references.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
+    ${fp("This handbook is a training document. It does not replace site-approved designs, procedures, supplier instructions or national regulations.", "Ce manuel est un document de formation. Il ne remplace ni les plans approuvés du site, ni ses procédures, ni les instructions des fournisseurs, ni la réglementation nationale.")}</section>`;
 
   document.getElementById("doc").innerHTML = h;
   document.querySelectorAll("svg").forEach(s => { try { s.pauseAnimations(); s.setCurrentTime(2.5); } catch (e) {} });
