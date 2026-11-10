@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bench to Boardroom Handbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Print handbook: a single light look by choice (it is a paper document), A4, one chapter per activity. */
+:root {
+  color-scheme: light;
+  --bg: #ffffff; --paper: #f7f8f5; --ink: #1c2220; --muted: #5f6964; --line: #d2d8d1; --accent: #e3a008; --accent-ink: #8a5a00; --good: #2e7d4f; --bad: #b3261e;
+  --sky: #dfe9ee; --sky2: #bcd5e3; --lat: #b4552f; --sap: #c99460; --rock: #858d88; --rock2: #a2aaa5; --rockline: #59615c;
+  --ore: #d6a21e; --mach: #f2b705; --machd: #383d3a; --steel: #8a949a; --tyre: #262a29; --water: #3a84c4; --flash: #ffd84a;
+  --dust: #cbb9a0; --road: #aa9f8f; --hg: #c8372d; --mg: #e07b22; --lg: #e6c235; --waste: #4f7cac;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@page { size: A4; margin: 16mm 15mm 18mm; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 10.2pt/1.5 var(--f-body); }
+.doc { max-width: 190mm; margin: 0 auto; padding: 0 16px; }
+h1, h2, h3, h4 { font-family: var(--f-display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-size: 22pt; text-transform: uppercase; margin-bottom: 4mm; }
+h3 { font-size: 14pt; margin: 5mm 0 2mm; }
+h4 { font: 600 7.5pt/1 var(--f-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2mm; }
+p { margin: 0 0 2.4mm; }
+ul, ol { margin: 0 0 2.4mm; padding-left: 5mm; }
+li { margin-bottom: 1mm; }
+.eyebrow { font: 500 7.5pt/1.2 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.page { break-before: page; }
+.avoid { break-inside: avoid; }
+.scene { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+.scene .lbl { font: 500 12px var(--f-mono); fill: var(--ink); }
+.scene .lbl.small { font-size: 10.5px; } .scene .lbl.tiny { font-size: 9px; fill: var(--muted); }
+.scene .lbl.strong { font: 600 13px var(--f-body); } .scene .lbl.light { fill: #f4f4f0; } .scene .lbl.warn { fill: var(--bad); }
+.scene .lbl.ore { fill: var(--ore); } .scene .lbl.water { fill: var(--water); } .scene .dimt { fill: var(--muted); }
+.scene .dim line { stroke: var(--muted); stroke-width: 1; } .scene .inset { fill: var(--paper); stroke: var(--line); opacity: 0.94; }
+.scene .rain { stroke: var(--water); } .scene .hot .tag rect { fill: var(--ink); opacity: 0.88; } .scene .hot .tag text { font: 600 11px var(--f-body); fill: #fff; }
+
+/* cover */
+.cover { min-height: 255mm; display: grid; align-content: space-between; gap: 8mm; padding-top: 6mm; }
+.cover h1 { font-size: 46pt; text-transform: uppercase; letter-spacing: 0.01em; }
+.cover .sub { font-size: 13pt; color: var(--muted); max-width: 140mm; }
+.cover .meta { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 2px solid var(--ink); padding-top: 3mm; gap: 4mm; font-size: 9pt; }
+.cover .meta b { display: block; font: 600 7.5pt var(--f-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.band { height: 3mm; background: repeating-linear-gradient(-45deg, var(--accent) 0 6mm, var(--ink) 6mm 12mm); }
+
+.toc { list-style: none; padding: 0; columns: 2; column-gap: 10mm; }
+.toc li { display: flex; gap: 3mm; border-bottom: 1px dotted var(--line); padding: 1.4mm 0; break-inside: avoid; }
+.toc .n { font-family: var(--f-mono); color: var(--accent-ink); min-width: 10mm; }
+
+table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 2mm 0 4mm; }
+th, td { text-align: left; vertical-align: top; padding: 1.8mm 2mm; border-bottom: 1px solid var(--line); }
+th { font: 600 7.5pt var(--f-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1.5px solid var(--ink); }
+.part { min-height: 250mm; display: grid; align-content: center; gap: 6mm; }
+.part .num { font: 700 110pt/0.9 var(--f-display); color: var(--accent); }
+.part h2 { font-size: 40pt; }
+.comp { list-style: none; padding: 0; display: grid; gap: 2mm; }
+.comp li { padding-left: 5mm; position: relative; }
+.comp li::before { content: ""; position: absolute; left: 0; top: 1.6mm; width: 2mm; height: 2mm; background: var(--accent); transform: rotate(45deg); }
+.chap-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 2mm; margin-bottom: 4mm; gap: 6mm; }
+.chap-head h2 { margin: 0; font-size: 20pt; }
+.cols { display: grid; grid-template-columns: 1.55fr 1fr; gap: 6mm; margin-top: 4mm; }
+.cols > * { min-width: 0; }
+.box { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 3mm 3.5mm; margin-bottom: 3.5mm; break-inside: avoid; }
+.formula { padding: 1.6mm 0; border-top: 1px solid var(--line); }
+.formula:first-of-type { border-top: 0; }
+.formula .n { display: block; font-size: 7.8pt; color: var(--muted); }
+.formula .f { display: block; font: 500 9.4pt/1.4 var(--f-mono); }
+.prof { border-left: 3px solid var(--accent); background: #fdf6e3; }
+.tips { counter-reset: t; list-style: none; padding: 0; }
+.tips li { position: relative; padding-left: 8mm; }
+.tips li::before { counter-increment: t; content: counter(t, decimal-leading-zero); position: absolute; left: 0; font: 600 8.5pt var(--f-mono); color: var(--accent-ink); }
+.ex { border: 1.5px dashed var(--ink); border-radius: 4px; padding: 3mm 3.5mm; break-inside: avoid; margin-top: 3mm; }
+.ex ol { list-style: lower-alpha; }
+.answer-line { display: inline-block; min-width: 26mm; border-bottom: 1px solid var(--muted); margin-left: 2mm; }
+.q { break-inside: avoid; margin-bottom: 3mm; }
+.q ol { list-style: upper-alpha; margin-top: 1mm; }
+.sol { break-inside: avoid; border-bottom: 1px solid var(--line); padding: 2mm 0 3mm; }
+.corr .claim { text-decoration: line-through; text-decoration-color: var(--bad); color: var(--muted); }
+.key { columns: 3; column-gap: 8mm; font-family: var(--f-mono); font-size: 9pt; }
+.small { font-size: 8.4pt; color: var(--muted); }
+.gates td:first-child { font-family: var(--f-mono); color: var(--accent-ink); }
+@media screen { body { background: #e8ebe6; } .doc { background: #fff; padding: 14mm 16mm; margin: 16px auto; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+  .page { border-top: 1px dashed var(--line); padding-top: 10mm; margin-top: 10mm; } }
+@media (max-width: 700px) { .cols { grid-template-columns: 1fr; } .toc, .key { columns: 1; } .cover h1 { font-size: 30pt; } .doc { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="doc" id="doc"></div>
+<script src="content.js"></script>
+<script src="illustrations.js"></script>
+<script>
+(function () {
+  const A = window.ACADEMY, S = window.SCENES;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const L = "ABCDEFGHIJKLMNOP";
+  let h = "";
+
+  /* cover */
+  h += `<section class="cover">
+    <div><div class="band"></div></div>
+    <div><div class="eyebrow">Open-pit operations academy · Field handbook</div>
+      <h1 style="margin-top:4mm">Bench to<br>Boardroom</h1>
+      <p class="sub" style="margin-top:4mm">From graduate engineer to project manager in six open-pit activities: load and haul, drilling, blasting, dewatering, crusher feed and grade control. Courses, field tips, exercises and end-of-cycle exams.</p></div>
+    <div>${S.hero({ animate: false })}</div>
+    <div class="meta"><div><b>Audience</b>Junior engineers on hard-rock gold operations, West Africa</div><div><b>Structure</b>3 cycles · 18 modules · 45 exam questions</div><div><b>Edition</b>1.0 · November 2026 · SI units</div></div>
+  </section>`;
+
+  /* contents */
+  const toc = [["", "Foreword from the professor"], ["", "How the programme works"], ["", "Standards and the approval gates"]];
+  A.cycles.forEach(c => { toc.push(["Part " + ["I", "II", "III"][c.n - 1], "Cycle " + c.n + " · " + c.name]); A.activities.forEach((a, i) => toc.push([c.n + "." + (i + 1), a.name])); toc.push([c.n + ".E", "Cycle " + c.n + " exam"]); });
+  [["A", "Professor's corrections"], ["B", "Worked solutions"], ["C", "Exam answer keys"], ["D", "Formula sheet"], ["E", "Glossary English–French"], ["F", "References"]].forEach(x => toc.push(["App. " + x[0], x[1]]));
+  h += `<section class="page"><h2>Contents</h2><ol class="toc">${toc.map(t => `<li><span class="n">${t[0]}</span><span>${esc(t[1])}</span></li>`).join("")}</ol></section>`;
+
+  /* foreword */
+  h += `<section class="page"><div class="eyebrow">Foreword</div><h2>From the professor</h2>
+    <p>An open pit is a factory with no roof, run by people who rotate every month, on ground that changes with every blast and every rainy season. The engineer who succeeds there is not the one who knows the most formulas. It is the one who checks the numbers, records what really happened, understands what the next activity downstream needs, and has the confidence to stop a job that is wrong.</p>
+    <p>This handbook follows the material through the pit. Grade control decides what is ore. Drilling puts the holes where the design says. Blasting breaks the rock to a size the fleet and the crusher can handle. Dewatering keeps water from ruining all three. Load and haul moves the rock. Crusher feed is where the mine's tonnes become the company's ounces. Every activity is a customer of the one before it.</p>
+    <p>The programme climbs three cycles. As an <b>Engineer</b> you learn to execute and measure. As a <b>Senior Engineer</b> you turn measurements into better designs and standards. As a <b>Project Manager</b> you are accountable for the contract: safety, schedule, cost, people and the client relationship. The technical content does not disappear at the top; it becomes the evidence for commercial decisions.</p>
+    <p>Two rules run through every chapter. First, <b>state your units and your assumptions</b>: most site errors are unit errors and unstated assumptions (Appendix A lists the most common ones). Second, <b>respect the gates</b>: no loading without as-drilled sign-off, no change without a variation, no blast without clearance. Gates protect people first and contracts second.</p>
+    <p>Work every exercise with a calculator before reading the solution. Then repeat it with your own site's numbers. That is where the learning happens.</p>
+    <div class="box prof" style="margin-top:6mm"><h4>A word on examples</h4><p style="margin:0">Numbers in this handbook are teaching values typical of hard-rock gold pits in West Africa (115 mm holes, 10 m benches, 90 t trucks, a single wet season of 1 300–1 800 mm). They are not site design values. Your site's approved designs, SOPs and national regulations always take precedence.</p></div>
+  </section>`;
+
+  /* how it works */
+  h += `<section class="page"><div class="eyebrow">Programme</div><h2>How the programme works</h2>
+    <p>Each cycle contains six modules, one per activity. Each module has four parts: a <b>course</b> (principles, formulas and standards), <b>field tips</b>, a graded <b>exercise</b> and a <b>field tool</b> (a calculator in the interactive version). A cycle ends with a 15-question exam; the pass mark is 80%. Passing unlocks the next cycle's exam. Courses are open at all levels.</p>
+    <table><thead><tr><th>Cycle</th><th>Experience</th><th>Role</th><th>Competencies assessed</th></tr></thead><tbody>
+    ${A.cycles.map(c => `<tr><td><b>${c.n} · ${esc(c.name)}</b></td><td>${esc(c.years)}</td><td>${esc(c.role)}</td><td>${c.competencies.map(esc).join("; ")}</td></tr>`).join("")}</tbody></table>
+    <h3>Module map</h3>
+    <table><thead><tr><th>Activity</th>${A.cycles.map(c => `<th>Cycle ${c.n} · ${esc(c.name)}</th>`).join("")}</tr></thead><tbody>
+    ${A.activities.map(a => `<tr><td><b>${esc(a.name)}</b><br><span class="small">${esc(a.fr)}</span></td>${A.cycles.map(c => `<td>${esc(A.modules[c.id][a.id].title)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+    <h3>Assessment</h3>
+    <ul><li>Exercises are answered to a stated tolerance; the interactive tool marks them automatically.</li><li>Exams: 15 multiple-choice questions, 80% to pass, explanations shown after submission. Answer keys for instructors are in Appendix C.</li><li>A passed exam is a knowledge check. Field competence is signed off by a supervisor against the site's competency register.</li></ul>
+  </section>`;
+
+  /* standards & gates */
+  const gates = [["1", "Pre-drill input", "Submit pattern design", "Approve layout & bench release", "Signed layout drawing"], ["2", "Drilling", "Drill per approved pattern", "—", "Drill log, as-drilled data"], ["3", "As-drilled survey", "Submit as-drilled report", "Sign off depths", "Signed as-drilled record"], ["4", "Loading authorisation", "Submit blast design and MIC calculation", "Issue written authorisation", "Loading authorisation"], ["5", "Pre-blast inspection", "Conduct and document", "Witness or accept", "Pre-blast checklist"], ["6", "Blast execution", "Fire per approved sequence", "Issue all-clear", "Blast log"], ["7", "Post-blast inspection", "Conduct and document", "Accept or raise NCR", "Post-blast report"], ["8", "Closeout", "Submit blast record", "Sign off", "Blast register entry"]];
+  h += `<section class="page"><div class="eyebrow">Framework</div><h2>Standards and the approval gates</h2>
+    <h3>Hierarchy of standards</h3>
+    <ol><li><b>National law</b>: mining code, explosives regulations, licensing, magazine permits, transport and notification. Legal precedence.</li><li><b>ISEE</b> practice for blast design, safety and exclusion zones.</li><li><b>USBM</b>: RI 8507 (ground vibration) and RI 8485 (airblast).</li><li><b>Supplier technical standards</b> for products and initiation systems.</li><li><b>Site SOPs</b> and the owner's procedures.</li></ol>
+    <p>Where the law is silent, apply the stricter of the others.</p>
+    <h3>The eight drill-and-blast gates (contractor–owner)</h3>
+    <table class="gates"><thead><tr><th>#</th><th>Phase</th><th>Contractor</th><th>Owner</th><th>Output document</th></tr></thead><tbody>${gates.map(g => `<tr>${g.map(x => `<td>${esc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+    <div class="box prof"><h4>Professor's rule</h4><p style="margin:0">A verbal instruction that skips a gate ("load it, we will sign later") is recorded in writing the same day and not executed until confirmed. The as-drilled sign-off before loading is a safety gate and a contractual boundary at the same time.</p></div>
+  </section>`;
+
+  /* parts */
+  A.cycles.forEach(c => {
+    h += `<section class="page part"><div class="num">0${c.n}</div><div class="eyebrow">Part ${["I", "II", "III"][c.n - 1]} · Cycle ${c.n} · ${esc(c.years)}</div><h2>${esc(c.name)}</h2><p style="font-size:12pt;max-width:140mm">${esc(c.role)}</p><p style="max-width:140mm"><b>Goal of the cycle.</b> ${esc(c.goal)}</p><ul class="comp">${c.competencies.map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>`;
+    A.activities.forEach((a, i) => {
+      const m = A.modules[c.id][a.id];
+      h += `<section class="page"><div class="chap-head"><h2>${c.n}.${i + 1} ${esc(a.name)}</h2><span class="eyebrow">${esc(a.fr)} · Cycle ${c.n}</span></div>
+        <h3 style="margin-top:0">${esc(m.title)}</h3>
+        ${c.n === 1 ? S[a.id]({ animate: false }) : ""}
+        <div class="cols"><div>
+          <div class="box"><h4>Learning objectives</h4><ul class="comp">${m.objectives.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>
+          ${m.lessons.map(l => `<div><h3>${l.h}</h3>${l.body}</div>`).join("")}
+        </div><div>
+          <div class="box"><h4>Formula card</h4>${m.formulas.map(f => `<div class="formula"><span class="n">${f.name}</span><span class="f">${f.f}</span>${f.note ? `<span class="n">${f.note}</span>` : ""}</div>`).join("")}</div>
+          <div class="box"><h4>Field tips</h4><ol class="tips">${m.tips.map(t => `<li>${t}</li>`).join("")}</ol></div>
+          <div class="box prof"><h4>Professor's note</h4><p style="margin:0">${esc(m.prof)}</p></div>
+        </div></div>
+        <div class="ex"><h4>Exercise ${c.n}.${i + 1}</h4><p>${esc(m.exercise.intro)}</p><ol>${m.exercise.parts.map(p => `<li>${esc(p.q)} <span class="answer-line"></span> ${esc(p.unit)}</li>`).join("")}</ol><p class="small" style="margin:0">Worked solution: Appendix B, ${c.n}.${i + 1}.</p></div>
+      </section>`;
+    });
+    h += `<section class="page"><div class="chap-head"><h2>${c.n}.E Cycle ${c.n} exam</h2><span class="eyebrow">15 questions · pass 80% (12/15)</span></div>
+      ${A.exams[c.id].map((q, i) => `<div class="q"><b>${i + 1}. ${esc(q.q)}</b><ol>${q.o.map(o => `<li>${esc(o)}</li>`).join("")}</ol></div>`).join("")}</section>`;
+  });
+
+  /* appendices */
+  h += `<section class="page corr"><div class="eyebrow">Appendix A</div><h2>Professor's corrections</h2><p>Statements heard on real sites, and why they are wrong. Each one can cause an unsafe design or a lost argument with a client.</p>
+    ${A.corrections.map(x => `<div class="box"><p class="claim">${esc(x.claim)}</p><p style="margin:0">${esc(x.fix)}</p></div>`).join("")}</section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix B</div><h2>Worked solutions</h2>
+    ${A.cycles.map(c => A.activities.map((a, i) => { const ex = A.modules[c.id][a.id].exercise; return `<div class="sol"><h4>${c.n}.${i + 1} · ${esc(a.name)} · answers: ${ex.parts.map((p, j) => `${"abcdefgh"[j]}) ${p.ans.toLocaleString("en-US")} ${esc(p.unit)}`).join(" · ")}</h4>${ex.solution}</div>`; }).join("")).join("")}</section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix C · instructors</div><h2>Exam answer keys</h2>
+    ${A.cycles.map(c => `<h3>Cycle ${c.n} · ${esc(c.name)}</h3><div class="key">${A.exams[c.id].map((q, i) => `<div>${String(i + 1).padStart(2, "0")} · ${L[q.a]}</div>`).join("")}</div><table><thead><tr><th>#</th><th>Explanation</th></tr></thead><tbody>${A.exams[c.id].map((q, i) => `<tr><td>${i + 1}</td><td>${esc(q.why)}</td></tr>`).join("")}</tbody></table>`).join("")}</section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix D</div><h2>Formula sheet</h2>
+    <table><thead><tr><th>Activity</th><th>Quantity</th><th>Formula</th><th>Units / notes</th></tr></thead><tbody>
+    ${A.cycles.map(c => A.activities.map(a => A.modules[c.id][a.id].formulas.map(f => `<tr><td>${esc(a.name)} · C${c.n}</td><td>${f.name}</td><td style="font-family:var(--f-mono)">${f.f}</td><td>${f.note || ""}</td></tr>`).join("")).join("")).join("")}</tbody></table>
+    <h3>Constants and conversions</h3><table><tbody>
+    <tr><td>1 troy ounce</td><td>31.1035 g</td></tr><tr><td>1 ha</td><td>10 000 m²</td></tr><tr><td>1 L/s</td><td>3.6 m³/h</td></tr><tr><td>g</td><td>9.81 m/s²</td></tr>
+    <tr><td>USBM vibration, imperial → metric</td><td>k 160 (in/s, ft/lb½) ≈ k 1 140 (mm/s, m/kg½), β unchanged</td></tr><tr><td>Konya timing, per ft → per m</td><td>× 3.28</td></tr></tbody></table></section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix E</div><h2>Glossary English–French</h2>
+    <table><thead><tr><th>English</th><th>Français</th><th>Definition</th></tr></thead><tbody>${A.glossary.map(g => `<tr><td><b>${esc(g[0])}</b></td><td>${esc(g[1])}</td><td>${esc(g[2])}</td></tr>`).join("")}</tbody></table></section>`;
+  h += `<section class="page"><div class="eyebrow">Appendix F</div><h2>References</h2><ol>${A.references.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
+    <p class="small" style="margin-top:6mm">This handbook is a training document. It does not replace site-approved designs, procedures, supplier instructions or national regulations.</p></section>`;
+
+  document.getElementById("doc").innerHTML = h;
+  document.querySelectorAll("svg").forEach(s => { try { s.pauseAnimations(); s.setCurrentTime(2.5); } catch (e) {} });
+})();
+</script>
+</body>
+</html>

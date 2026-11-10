@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bench to Boardroom</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a field-book page. One column of work (hero section → cycle → activity grid → module / exam),
+   section-view drawings as the illustrations, hi-vis amber as the single accent. */
+:root {
+  --bg: #eef0ec; --paper: #f8f9f6; --ink: #1c2220; --muted: #5f6964; --line: #d2d8d1; --accent: #e3a008; --accent-ink: #8a5a00;
+  --good: #2e7d4f; --warnc: #a86a12; --bad: #b3261e;
+  --sky: #dfe9ee; --sky2: #bcd5e3; --lat: #b4552f; --sap: #c99460; --rock: #858d88; --rock2: #a2aaa5; --rockline: #59615c;
+  --ore: #d6a21e; --mach: #f2b705; --machd: #383d3a; --steel: #8a949a; --tyre: #262a29; --water: #3a84c4; --flash: #ffd84a;
+  --dust: #cbb9a0; --road: #aa9f8f; --hg: #c8372d; --mg: #e07b22; --lg: #e6c235; --waste: #4f7cac;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1312; --paper: #171c1a; --ink: #e6eae5; --muted: #9aa49e; --line: #2c3431; --accent: #f0b429; --accent-ink: #f5c451;
+  --good: #5fbf86; --warnc: #e0a446; --bad: #f07167;
+  --sky: #1b2730; --sky2: #121c24; --lat: #8f4527; --sap: #8b6946; --rock: #5d6560; --rock2: #4a514d; --rockline: #8d9691;
+  --ore: #c99a1e; --mach: #e8ad06; --machd: #1d2120; --steel: #79838a; --tyre: #0a0c0b; --water: #4a95d4; --flash: #ffe066;
+  --dust: #6c6459; --road: #4f4b45; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1312; --paper: #171c1a; --ink: #e6eae5; --muted: #9aa49e; --line: #2c3431; --accent: #f0b429; --accent-ink: #f5c451;
+  --good: #5fbf86; --warnc: #e0a446; --bad: #f07167;
+  --sky: #1b2730; --sky2: #121c24; --lat: #8f4527; --sap: #8b6946; --rock: #5d6560; --rock2: #4a514d; --rockline: #8d9691;
+  --ore: #c99a1e; --mach: #e8ad06; --machd: #1d2120; --steel: #79838a; --tyre: #0a0c0b; --water: #4a95d4; --flash: #ffe066;
+  --dust: #6c6459; --road: #4f4b45; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--f-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--accent-ink); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; line-height: 1.1; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); text-transform: uppercase; }
+h2 { font-size: 1.9rem; text-transform: uppercase; }
+h3 { font-size: 1.35rem; }
+.eyebrow { font: 500 0.72rem/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+p { margin: 0 0 0.7em; max-width: 68ch; }
+
+/* top bar */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--paper); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; align-items: center; gap: 16px; padding-block: 10px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; text-decoration: none; color: var(--ink); }
+.brand b { font: 700 1.35rem/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.02em; }
+.brand span { font-size: 0.8rem; color: var(--muted); }
+.chips { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.chip { font: 500 0.72rem/1 var(--f-mono); padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--bg); white-space: nowrap; }
+.chip.pass { border-color: var(--good); color: var(--good); }
+.chip.on { border-color: var(--accent); color: var(--ink); }
+.barlink { font-size: 0.85rem; font-weight: 600; text-decoration: none; padding: 6px 12px; border-radius: 6px; background: var(--ink); color: var(--paper); }
+
+/* hero */
+.hero { padding-block: 28px 8px; display: grid; gap: 18px; }
+.hero-top { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: end; }
+.hero-top > * { min-width: 0; }
+.lede { font-size: 1.05rem; color: var(--muted); }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--paper); }
+.steps div { padding: 10px 12px; border-right: 1px solid var(--line); }
+.steps div:last-child { border-right: 0; }
+.steps b { display: block; font: 600 1.05rem/1.2 var(--f-display); text-transform: uppercase; }
+.steps span { font-size: 0.8rem; color: var(--muted); }
+.figure { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; position: relative; }
+.figure .cap { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; }
+.scene { display: block; width: 100%; height: auto; }
+.scene .lbl { font: 500 12px var(--f-mono); fill: var(--ink); }
+.scene .lbl.small { font-size: 10.5px; }
+.scene .lbl.tiny { font-size: 9px; fill: var(--muted); }
+.scene .lbl.strong { font: 600 13px var(--f-body); }
+.scene .lbl.light { fill: #f4f4f0; }
+.scene .lbl.warn { fill: var(--bad); }
+.scene .lbl.ore { fill: var(--ore); font-weight: 600; }
+.scene .lbl.water { fill: var(--water); }
+.scene .dimt { fill: var(--muted); }
+.scene .dim line { stroke: var(--muted); stroke-width: 1; }
+.scene .inset { fill: var(--paper); stroke: var(--line); opacity: 0.94; }
+.scene .rain { stroke: var(--water); stroke-width: 1.3; opacity: 0.55; }
+.scene .hot { cursor: pointer; outline: none; }
+.scene .hot .tag rect { fill: var(--ink); opacity: 0.88; }
+.scene .hot .tag text { font: 600 11px var(--f-body); fill: var(--paper); }
+.scene .hot:hover .tag rect, .scene .hot:focus .tag rect { fill: var(--accent); opacity: 1; }
+.scene .hot:hover .tag text, .scene .hot:focus .tag text { fill: #1c2220; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; }
+.ghost:hover { border-color: var(--ink); }
+
+/* cycles */
+section.block { padding-block: 26px; }
+.cycles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper); }
+.cyc { text-align: left; border: 0; border-right: 1px solid var(--line); background: transparent; padding: 14px 16px; cursor: pointer; display: grid; gap: 4px; }
+.cyc:last-child { border-right: 0; }
+.cyc .t { font: 700 1.4rem/1 var(--f-display); text-transform: uppercase; }
+.cyc .s { font-size: 0.8rem; color: var(--muted); }
+.cyc[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.cyc[aria-selected="true"] .s, .cyc[aria-selected="true"] .eyebrow { color: color-mix(in srgb, var(--paper) 72%, transparent); }
+.meter { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.cycinfo { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; padding-block: 18px 6px; }
+.cycinfo > * { min-width: 0; }
+.comp { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.comp li { padding-left: 18px; position: relative; font-size: 0.92rem; }
+.comp li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 8px; height: 8px; background: var(--accent); transform: rotate(45deg); }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.card { text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; cursor: pointer; display: grid; gap: 6px; min-width: 0; }
+.card:hover { border-color: var(--ink); }
+.card .t { font: 700 1.3rem/1.1 var(--f-display); text-transform: uppercase; }
+.card .fr { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+.card .m { font-size: 0.9rem; }
+.status { display: inline-flex; align-items: center; gap: 6px; font: 500 0.72rem/1 var(--f-mono); color: var(--muted); }
+.status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--muted); }
+.status.prog { color: var(--warnc); } .status.prog::before { border-color: var(--warnc); background: linear-gradient(90deg, var(--warnc) 50%, transparent 50%); }
+.status.done { color: var(--good); } .status.done::before { border-color: var(--good); background: var(--good); }
+
+.examcard { margin-top: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--paper); border: 1px dashed var(--ink); border-radius: 10px; padding: 14px 16px; }
+.btn { border: 0; border-radius: 6px; padding: 9px 16px; background: var(--accent); color: #1c2220; font-weight: 600; cursor: pointer; }
+.btn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+.btn.dark { background: var(--ink); color: var(--paper); }
+
+/* module */
+.mod-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: space-between; margin-bottom: 14px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 16px; overflow-x: auto; }
+.tab { border: 0; background: transparent; padding: 10px 14px; cursor: pointer; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.panel { padding-block: 18px; }
+.two { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; }
+.two > * { min-width: 0; }
+.lesson { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.lesson:last-child { border-bottom: 0; }
+.lesson h3 { margin-bottom: 8px; }
+.lesson ul { margin: 0 0 0.6em; padding-left: 1.2em; max-width: 68ch; }
+.lesson li { margin-bottom: 4px; }
+.side { display: grid; gap: 14px; align-content: start; }
+.box { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.box h4 { margin: 0 0 8px; font: 600 0.75rem/1 var(--f-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.formula { display: grid; gap: 2px; padding: 8px 0; border-top: 1px solid var(--line); }
+.formula:first-of-type { border-top: 0; }
+.formula .n { font-size: 0.78rem; color: var(--muted); }
+.formula .f { font: 500 0.95rem/1.4 var(--f-mono); }
+.prof { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--paper)); }
+.prof p { margin: 0; font-size: 0.93rem; }
+.tips { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: t; }
+.tips li { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px 10px 46px; position: relative; max-width: 80ch; }
+.tips li::before { counter-increment: t; content: counter(t, decimal-leading-zero); position: absolute; left: 12px; top: 10px; font: 600 0.85rem var(--f-mono); color: var(--accent-ink); }
+.ex-intro { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; max-width: 80ch; }
+.parts { display: grid; gap: 10px; margin-top: 14px; max-width: 760px; }
+.part { display: grid; grid-template-columns: 1fr 150px 70px 34px; gap: 10px; align-items: center; }
+.part label { font-size: 0.92rem; }
+input[type="number"], input[type="text"], select { width: 100%; font: 500 0.95rem var(--f-mono); padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); }
+.unit { font: 0.8rem var(--f-mono); color: var(--muted); }
+.mark { font-weight: 700; text-align: center; }
+.mark.ok { color: var(--good); } .mark.no { color: var(--bad); }
+.solution { margin-top: 14px; max-width: 80ch; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+
+/* calculators */
+.calc { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.calc > * { min-width: 0; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; align-content: start; }
+.fields label { display: grid; gap: 3px; font-size: 0.8rem; color: var(--muted); }
+.out { display: grid; gap: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; align-content: start; }
+.out div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.out div:last-child { border-bottom: 0; }
+.out b { font: 600 0.95rem var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.flag { font: 500 0.72rem var(--f-mono); padding: 2px 7px; border-radius: 999px; margin-left: 6px; }
+.flag.g { background: color-mix(in srgb, var(--good) 18%, transparent); color: var(--good); }
+.flag.a { background: color-mix(in srgb, var(--warnc) 18%, transparent); color: var(--warnc); }
+.flag.r { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+.sim { margin-top: 22px; }
+.simgrid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; }
+.simgrid > * { min-width: 0; }
+.plan { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+.plan svg { display: block; width: 100%; min-width: 420px; height: auto; }
+.plan .h { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+.plan .h.f { fill: var(--flash); stroke: var(--bad); }
+.plan .h.d { fill: var(--rock2); }
+.plan text { font: 9px var(--f-mono); fill: var(--muted); }
+.plan .bar { fill: var(--accent); }
+.plan .bar.over { fill: var(--bad); }
+.plan .axis { stroke: var(--line); }
+
+/* exam */
+.q { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; max-width: 860px; }
+.q .qt { font-weight: 600; margin-bottom: 8px; }
+.q label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 4px; border-radius: 4px; cursor: pointer; font-size: 0.93rem; }
+.q label:hover { background: var(--bg); }
+.q.right { border-color: var(--good); } .q.wrong { border-color: var(--bad); }
+.q .why { font-size: 0.86rem; color: var(--muted); margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }
+.score { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-radius: 10px; border: 2px solid var(--ink); background: var(--paper); margin-bottom: 14px; max-width: 860px; }
+.score .big { font: 700 2.6rem/1 var(--f-display); }
+.cert { max-width: 860px; margin-top: 14px; border: 2px solid var(--accent); border-radius: 10px; padding: 22px; background: var(--paper); text-align: center; display: grid; gap: 8px; justify-items: center; }
+.cert .who { font: 700 2rem/1.1 var(--f-display); text-transform: uppercase; }
+
+.corr { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.corr .box p { font-size: 0.9rem; }
+.corr .claim { text-decoration: line-through; text-decoration-color: var(--bad); color: var(--muted); font-size: 0.88rem; margin-bottom: 6px; }
+footer { border-top: 1px solid var(--line); padding-block: 22px 40px; color: var(--muted); font-size: 0.85rem; }
+footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap; }
+.toggle { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+
+@media (max-width: 860px) {
+  .hero-top, .cycinfo, .two, .calc, .simgrid, .corr { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .grid, .cycles { grid-template-columns: 1fr; }
+  .cyc { border-right: 0; border-bottom: 1px solid var(--line); }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .steps div:nth-child(2) { border-right: 0; }
+  .steps div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .part { grid-template-columns: 1fr 110px 34px; }
+  .part .unit { display: none; }
+  .fields { grid-template-columns: 1fr; }
+  .chips { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#home"><b>Bench to Boardroom</b><span>Open-pit operations academy</span></a>
+    <div class="chips" id="chips"></div>
+    <a class="barlink" href="handbook.html" target="_blank" rel="noopener">Handbook</a>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer>
+  <div class="wrap">
+    <div>Standards hierarchy: national law (Guinea Mining Code, explosives regulations) → ISEE → USBM RI 8507 / RI 8485 → supplier technical standards → site SOPs. Site rules always win over this course.</div>
+    <label class="toggle"><input type="checkbox" id="instructor"> Instructor mode (unlock all exams)</label>
+    <div>Progress is saved in this browser only. <button class="ghost" id="reset" type="button">Reset progress</button></div>
+  </div>
+</footer>
+
+<script src="content.js"></script>
+<script src="illustrations.js"></script>
+<script>
+(function () {
+  const A = window.ACADEMY, SC = window.SCENES;
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const KEY = "b2b-progress-v1";
+  let st = { mods: {}, exams: {}, name: "", instructor: false, cycle: "engineer" };
+  try { const raw = localStorage.getItem(KEY); if (raw) st = Object.assign(st, JSON.parse(raw)); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let paused = reduce;
+
+  const cyc = id => A.cycles.find(c => c.id === id);
+  const act = id => A.activities.find(a => a.id === id);
+  const modKey = (c, a) => c + "." + a;
+  const modState = (c, a) => st.mods[modKey(c, a)] || { ex: {}, done: false, seen: false };
+  const cycleDone = c => A.activities.filter(a => modState(c, a.id).done).length;
+  const examUnlocked = c => { if (st.instructor) return true; const i = A.cycles.findIndex(x => x.id === c); return i === 0 || !!(st.exams[A.cycles[i - 1].id] || {}).passed; };
+  const fmt = (v, d = 2) => isFinite(v) ? Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
+
+  function applyMotion(root = document) { root.querySelectorAll("svg").forEach(s => { try { paused ? s.pauseAnimations() : s.unpauseAnimations(); } catch (e) {} }); }
+
+  function chips() {
+    $("#chips").innerHTML = A.cycles.map(c => {
+      const e = st.exams[c.id] || {}; const n = cycleDone(c.id);
+      return `<span class="chip ${e.passed ? "pass" : ""} ${st.cycle === c.id ? "on" : ""}">C${c.n} ${esc(c.name)} · ${e.passed ? "passed " + Math.round(e.best * 100) + "%" : n + "/6"}</span>`;
+    }).join("");
+  }
+
+  /* ---------------- home ---------------- */
+  function home() {
+    const c = cyc(st.cycle);
+    const n = cycleDone(c.id), ex = st.exams[c.id] || {};
+    $("#app").innerHTML = `
+      <div class="wrap hero">
+        <div class="hero-top">
+          <div><div class="eyebrow">Drill & blast · load & haul · water · plant feed · grade control</div>
+            <h1>From the bench<br>to the boardroom</h1></div>
+          <div><p class="lede">A three-cycle programme for open-pit engineers: six field activities per cycle, each with a course, field tips, a graded exercise and a working calculator. Pass the cycle exam at 80% to move up.</p></div>
+        </div>
+        <div class="steps"><div><b>Course</b><span>Principles, formulas, standards</span></div><div><b>Field tips</b><span>What the pit teaches you</span></div><div><b>Exercise</b><span>Numbers checked to tolerance</span></div><div><b>Exam</b><span>15 questions · pass 80%</span></div></div>
+        <div class="figure">${SC.hero()}<div class="cap"><span>Select an activity in the section to open its ${esc(c.name)} module.</span><button class="ghost" id="motion" type="button">${paused ? "Play animation" : "Pause animation"}</button></div></div>
+      </div>
+      <section class="wrap block">
+        <div class="cycles" role="tablist" aria-label="Career cycles">${A.cycles.map(x => {
+          const k = cycleDone(x.id), e = st.exams[x.id] || {};
+          return `<button class="cyc" role="tab" aria-selected="${x.id === c.id}" data-cyc="${x.id}"><span class="eyebrow">Cycle ${x.n} · ${esc(x.years)}</span><span class="t">${esc(x.name)}</span><span class="s">${k}/6 modules · ${e.passed ? "exam passed" : e.best != null ? "best " + Math.round(e.best * 100) + "%" : "exam not taken"}</span><span class="meter"><i style="width:${(k / 6) * 100}%"></i></span></button>`;
+        }).join("")}</div>
+        <div class="cycinfo">
+          <div><h2>${esc(c.name)}</h2><p style="margin-top:8px">${esc(c.role)}</p><p><b>Goal of the cycle:</b> ${esc(c.goal)}</p></div>
+          <div><div class="eyebrow" style="margin-bottom:8px">Competencies assessed</div><ul class="comp">${c.competencies.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+        </div>
+        <div class="grid">${A.activities.map(a => {
+          const m = A.modules[c.id][a.id], s = modState(c.id, a.id);
+          const solved = Object.values(s.ex || {}).filter(Boolean).length;
+          const cls = s.done ? "done" : (s.seen || solved) ? "prog" : "";
+          return `<button class="card" data-mod="${a.id}"><span class="status ${cls}">${s.done ? "Complete" : cls ? "In progress" : "Not started"}</span><span class="t">${esc(a.name)}</span><span class="fr">${esc(a.fr)}</span><span class="m">${esc(m.title)}</span></button>`;
+        }).join("")}</div>
+        <div class="examcard">
+          <div><div class="eyebrow">End-of-cycle exam</div><h3 style="margin-top:4px">Cycle ${c.n} · ${esc(c.name)} exam</h3><span style="font-size:.9rem;color:var(--muted)">${A.exams[c.id].length} questions · pass mark ${A.passMark * 100}% · ${n}/6 modules complete${ex.best != null ? " · best " + Math.round(ex.best * 100) + "%" : ""}</span></div>
+          <button class="btn dark" id="sit" ${examUnlocked(c.id) ? "" : "disabled"}>${examUnlocked(c.id) ? (ex.passed ? "Retake exam" : "Sit the exam") : "Pass Cycle " + (c.n - 1) + " first"}</button>
+        </div>
+      </section>
+      <section class="wrap block">
+        <div class="eyebrow">Professor's corrections</div><h2 style="margin:6px 0 14px">Errors that travel from site to site</h2>
+        <div class="corr">${A.corrections.map(x => `<div class="box"><div class="claim">${esc(x.claim)}</div><p>${esc(x.fix)}</p></div>`).join("")}</div>
+      </section>`;
+    $("#app").querySelectorAll("[data-cyc]").forEach(b => b.onclick = () => { st.cycle = b.dataset.cyc; save(); go(st.cycle); });
+    $("#app").querySelectorAll("[data-mod]").forEach(b => b.onclick = () => go(st.cycle + "-" + b.dataset.mod));
+    $("#app").querySelectorAll(".hot").forEach(g => { const f = () => go(st.cycle + "-" + g.dataset.act); g.addEventListener("click", f); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }); });
+    $("#sit").onclick = () => go("exam-" + c.id);
+    $("#motion").onclick = () => { paused = !paused; applyMotion(); $("#motion").textContent = paused ? "Play animation" : "Pause animation"; };
+    applyMotion();
+  }
+
+  /* ---------------- module ---------------- */
+  function module(cid, aid, tab = "course") {
+    const c = cyc(cid), a = act(aid), m = A.modules[cid][aid];
+    const s = modState(cid, aid); s.seen = true; st.mods[modKey(cid, aid)] = s; save();
+    const idx = A.activities.findIndex(x => x.id === aid);
+    const next = A.activities[idx + 1];
+    $("#app").innerHTML = `
+      <section class="wrap block">
+        <div class="mod-head">
+          <button class="ghost" id="back" type="button">← Cycle ${c.n} · ${esc(c.name)}</button>
+          <span class="status ${s.done ? "done" : "prog"}" id="mstat">${s.done ? "Complete" : "In progress"}</span>
+        </div>
+        <div class="eyebrow">Cycle ${c.n} · ${esc(a.name)} · ${esc(a.fr)}</div>
+        <h2 style="margin:6px 0 14px">${esc(m.title)}</h2>
+        <div class="figure">${SC[aid]()}</div>
+        <div class="tabs" role="tablist">${[["course", "Course"], ["tips", "Field tips"], ["exercise", "Exercise"], ["tool", aid === "blasting" ? "Field tool + timing simulator" : "Field tool"]].map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join("")}</div>
+        <div id="panel" class="panel"></div>
+        <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:14px">
+          <button class="btn" id="done" type="button">${s.done ? "Marked complete ✓" : "Mark module complete"}</button>
+          ${next ? `<button class="ghost" id="next" type="button">Next: ${esc(next.name)} →</button>` : `<button class="ghost" id="next" type="button">Go to the Cycle ${c.n} exam →</button>`}
+        </div>
+      </section>`;
+    const show = k => {
+      $("#app").querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.tab === k));
+      const p = $("#panel");
+      if (k === "course") p.innerHTML = `<div class="two"><div>
+          <div class="box" style="margin-bottom:16px"><h4>Learning objectives</h4><ul class="comp">${m.objectives.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>
+          ${m.lessons.map(l => `<div class="lesson"><h3>${l.h}</h3>${l.body}</div>`).join("")}</div>
+          <div class="side"><div class="box"><h4>Formula card</h4>${m.formulas.map(f => `<div class="formula"><span class="n">${f.name}</span><span class="f">${f.f}</span>${f.note ? `<span class="n">${f.note}</span>` : ""}</div>`).join("")}</div>
+          <div class="box prof"><h4>Professor's note</h4><p>${esc(m.prof)}</p></div></div></div>`;
+      if (k === "tips") p.innerHTML = `<ol class="tips">${m.tips.map(t => `<li>${t}</li>`).join("")}</ol>`;
+      if (k === "exercise") renderExercise(p, cid, aid, m.exercise);
+      if (k === "tool") { renderTool(p, m.tool); if (aid === "blasting") renderSim(p); if (cid === "pm" && m.tool === "evm") { /* PM modules also get the activity tool */ const extra = document.createElement("div"); extra.style.marginTop = "26px"; p.appendChild(extra); renderTool(extra, aid === "loadhaul" ? "haul" : aid === "drilling" ? "drill" : aid === "blasting" ? "blast" : aid === "dewatering" ? "water" : aid === "crusher" ? "feed" : "gc"); } }
+      applyMotion(p);
+    };
+    $("#app").querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.tab));
+    show(tab);
+    $("#back").onclick = () => go(cid);
+    $("#done").onclick = () => { s.done = true; save(); $("#done").textContent = "Marked complete ✓"; $("#mstat").className = "status done"; $("#mstat").textContent = "Complete"; chips(); };
+    $("#next").onclick = () => go(next ? cid + "-" + next.id : "exam-" + cid);
+    applyMotion();
+    window.scrollTo(0, 0);
+  }
+
+  function renderExercise(p, cid, aid, ex) {
+    const s = modState(cid, aid);
+    p.innerHTML = `<div class="ex-intro"><div class="eyebrow" style="margin-bottom:6px">Data</div>${esc(ex.intro)}</div>
+      <div class="parts">${ex.parts.map((q, i) => `<div class="part"><label for="ex${i}">${String.fromCharCode(97 + i)}) ${esc(q.q)}</label><input id="ex${i}" type="number" step="any" inputmode="decimal" placeholder="answer"><span class="unit">${esc(q.unit)}</span><span class="mark" id="mk${i}">${s.ex && s.ex[i] ? "✓" : ""}</span></div>`).join("")}</div>
+      <div class="row"><button class="btn" id="check" type="button">Check answers</button><button class="ghost" id="sol" type="button">Show worked solution</button><span id="exmsg" style="font-size:.9rem;color:var(--muted)"></span></div>
+      <div class="solution box" id="solbox" hidden><h4>Worked solution</h4>${ex.solution}</div>`;
+    ex.parts.forEach((q, i) => { if (s.ex && s.ex[i]) $("#mk" + i).className = "mark ok"; });
+    $("#check").onclick = () => {
+      let ok = 0;
+      ex.parts.forEach((q, i) => {
+        const v = parseFloat($("#ex" + i).value.replace(",", "."));
+        const tol = q.tol || Math.abs(q.ans) * 0.01;
+        const good = isFinite(v) && Math.abs(v - q.ans) <= tol + 1e-9;
+        const mk = $("#mk" + i); mk.textContent = isFinite(v) ? (good ? "✓" : "✗") : ""; mk.className = "mark " + (good ? "ok" : "no");
+        if (good) { ok++; s.ex[i] = true; }
+      });
+      const all = ex.parts.every((q, i) => s.ex[i]);
+      if (all) s.done = true;
+      st.mods[modKey(cid, aid)] = s; save(); chips();
+      $("#exmsg").textContent = `${ok}/${ex.parts.length} correct.` + (all ? " Module complete." : " Rework the red ones before opening the solution.");
+      if (all) { const d = $("#done"); if (d) d.textContent = "Marked complete ✓"; const ms = $("#mstat"); if (ms) { ms.className = "status done"; ms.textContent = "Complete"; } }
+    };
+    $("#sol").onclick = () => { $("#solbox").hidden = !$("#solbox").hidden; };
+  }
+
+  /* ---------------- field tools ---------------- */
+  const TOOLS = {
+    haul: { title: "Truck & loader match", inputs: [["bucket", "Bucket capacity (m³)", 12], ["ff", "Fill factor", 0.9], ["sg", "In-situ density (t/m³)", 2.7], ["swell", "Swell factor", 1.4], ["rated", "Truck rated payload (t)", 90], ["bcyc", "Bucket cycle (s)", 30], ["spot", "Truck spot time (s)", 30], ["tcyc", "Truck cycle (min)", 25], ["ntr", "Trucks", 10], ["nld", "Loaders", 1], ["eff", "Efficiency (50/60 = 0.83)", 0.83]],
+      calc(v) { const rl = v.sg / v.swell, pb = v.bucket * v.ff * rl; let n = Math.max(1, Math.floor(v.rated / pb + 1e-9)); const pay = n * pb; const svc = (n * v.bcyc + v.spot) / 60; const mf = (v.ntr * svc) / (v.nld * v.tcyc); const ql = v.nld * 60 / svc * pay * v.eff, qt = v.ntr * 60 / v.tcyc * pay * v.eff; const q = Math.min(ql, qt);
+        return [["Loose density", fmt(rl), "t/m³"], ["Bucket payload", fmt(pb, 1), "t"], ["Passes", n, n < 3 || n > 6 ? ["a", "outside 3–5"] : ["g", "ok"]], ["Truck payload", fmt(pay, 1) + " (" + Math.round(pay / v.rated * 100) + "%)", "t", pay / v.rated < 0.9 ? ["a", "underloaded"] : ["g", "ok"]], ["Loader service time", fmt(svc), "min"], ["Match factor", fmt(mf), mf < 0.9 ? ["a", "loader waits"] : mf > 1.1 ? ["a", "trucks queue"] : ["g", "balanced"]], ["Fleet output", fmt(q, 0), "t/h", ql < qt ? ["a", "loader-limited"] : ["a", "truck-limited"]]]; } },
+    drill: { title: "Drill productivity", inputs: [["H", "Bench height (m)", 10], ["J", "Subdrill (m)", 1], ["ang", "Hole angle from vertical (°)", 0], ["B", "Burden (m)", 3.5], ["S", "Spacing (m)", 4], ["sg", "Rock density (t/m³)", 2.7], ["pr", "Penetration rate (m/h)", 30], ["setup", "Tram + set-up (min/hole)", 4], ["hrs", "Effective hours per shift", 9], ["err", "Angle error (°)", 1]],
+      calc(v) { const L = v.H / Math.cos(v.ang * Math.PI / 180) + v.J; const tpm = v.B * v.S * v.H * v.sg / L; const th = L / v.pr * 60 + v.setup; const n = Math.floor(v.hrs * 60 / th); const dev = L * Math.tan(v.err * Math.PI / 180);
+        return [["Hole length", fmt(L), "m"], ["Tonnes per drilled metre", fmt(tpm, 1), "t/m"], ["Time per hole", fmt(th, 1), "min"], ["Holes per shift", n, ""], ["Metres per shift", fmt(n * L, 0), "m"], ["Tonnes drilled per shift", fmt(n * L * tpm, 0), "t"], ["Toe displacement from angle error", fmt(dev), "m", dev / v.B > 0.1 ? ["r", Math.round(dev / v.B * 100) + "% of B"] : ["g", Math.round(dev / v.B * 100) + "% of B"]]]; } },
+    blast: { title: "Blast design check", inputs: [["D", "Hole diameter (mm)", 115], ["rho", "Explosive density (g/cm³)", 0.85], ["E", "RWS (ANFO = 100)", 100], ["H", "Bench height (m)", 10], ["J", "Subdrill (m)", 1], ["T", "Stemming (m)", 2.5], ["B", "Burden (m)", 3.5], ["S", "Spacing (m)", 4], ["sgr", "Rock SG", 2.7], ["A", "Kuz-Ram rock factor A", 10], ["hpd", "Holes per 8 ms window", 1], ["dist", "Distance to receiver (m)", 600], ["k", "Site k (metric)", 1140], ["beta", "Site β", 1.6], ["lim", "PPV limit (mm/s)", 10]],
+      calc(v) { const q = 7.854e-4 * v.D * v.D * v.rho, L = v.H + v.J, Q = q * (L - v.T), PF = Q / (v.B * v.S * v.H); const x50 = v.A * Math.pow(PF, -0.8) * Math.pow(Q, 1 / 6) * Math.pow(115 / v.E, 19 / 30); const kon = 0.012 * (2 * v.rho / v.sgr + 1.5) * v.D; const mic = Q * v.hpd; const ppv = v.k * Math.pow(v.dist / Math.sqrt(mic), -v.beta); const sdr = Math.pow(v.k / v.lim, 1 / v.beta); const qmax = Math.pow(v.dist / sdr, 2);
+        return [["Linear charge density", fmt(q), "kg/m"], ["Charge per hole", fmt(Q, 1), "kg"], ["Powder factor", fmt(PF, 3), "kg/m³", PF < 0.4 ? ["a", "low"] : PF > 0.85 ? ["a", "high"] : ["g", "typical"]], ["Konya burden guide", fmt(kon), "m", Math.abs(v.B / kon - 1) > 0.15 ? ["a", Math.round((v.B / kon - 1) * 100) + "% vs design"] : ["g", "ok"]], ["Stiffness H/B", fmt(v.H / v.B, 1), "", v.H / v.B < 2 ? ["r", "< 2 blocky"] : v.H / v.B < 3 ? ["a", "2–3 fair"] : ["g", "≥ 3"]], ["Stemming T/B", fmt(v.T / v.B), "", v.T / v.B < 0.7 ? ["r", "< 0.7 flyrock risk"] : ["g", "ok"]], ["Kuz-Ram X50", fmt(x50, 0), "cm"], ["MIC", fmt(mic, 0), "kg"], ["Predicted PPV", fmt(ppv, 1), "mm/s", ppv > v.lim ? ["r", "exceeds limit"] : ppv > 0.8 * v.lim ? ["a", "> 80% of limit"] : ["g", "ok"]], ["Max MIC for limit", fmt(qmax, 0), "kg"], ["Max holes per 8 ms", Math.floor(qmax / Q), ""]]; } },
+    water: { title: "Sump & pump", inputs: [["ha", "Catchment (ha)", 20], ["rain", "Design storm (mm)", 80], ["C", "Runoff coefficient", 0.8], ["np", "Pumps", 2], ["qp", "Flow per pump (L/s)", 75], ["stat", "Static lift (m)", 55], ["L", "Discharge line length (m)", 1000], ["d", "Pipe internal diameter (mm)", 250], ["chw", "Hazen-Williams C", 150], ["eta", "Pump efficiency", 0.65]],
+      calc(v) { const V = v.rain / 1000 * v.ha * 1e4 * v.C, Qt = v.np * v.qp, m3h = Qt * 3.6, t = V / m3h; const Q = Qt / 1000, d = v.d / 1000; const vel = Q / (Math.PI * d * d / 4); const hf = 10.67 * v.L * Math.pow(Q, 1.852) / (Math.pow(v.chw, 1.852) * Math.pow(d, 4.87)); const H = v.stat + hf; const P = 9.81 * Q * H / v.eta;
+        return [["Storm runoff volume", fmt(V, 0), "m³"], ["Pumping capacity", fmt(m3h, 0), "m³/h"], ["Pump-out time", fmt(t, 1), "h", t > 24 ? ["r", "> 24 h"] : t > 12 ? ["a", "12–24 h"] : ["g", "< 12 h"]], ["Pipe velocity (single line)", fmt(vel), "m/s", vel > 3 ? ["a", "high friction"] : vel < 1 ? ["a", "settling risk"] : ["g", "ok"]], ["Friction loss", fmt(hf, 1), "m"], ["Total dynamic head", fmt(H, 1), "m"], ["Shaft power (total)", fmt(P, 0), "kW"]]; } },
+    feed: { title: "Crusher blend", inputs: [["s1", "HG share (%)", 60], ["g1", "HG grade (g/t)", 1.8], ["o1", "HG oxide (%)", 20], ["s2", "MG share (%)", 0], ["g2", "MG grade (g/t)", 1.2], ["o2", "MG oxide (%)", 40], ["s3", "LG share (%)", 40], ["g3", "LG grade (g/t)", 0.9], ["o3", "LG oxide (%)", 50], ["olim", "Oxide limit (%)", 35], ["tph", "Crusher rate (t/h)", 450], ["rec", "Recovery (%)", 92], ["price", "Gold price ($/oz)", 2500]],
+      calc(v) { const sum = v.s1 + v.s2 + v.s3 || 1; const g = (v.s1 * v.g1 + v.s2 * v.g2 + v.s3 * v.g3) / sum; const o = (v.s1 * v.o1 + v.s2 * v.o2 + v.s3 * v.o3) / sum; const oz = v.tph * 24 * g * v.rec / 100 / 31.1035; const val = v.tph * g * v.rec / 100 * v.price / 31.1035;
+        return [["Shares sum", fmt(v.s1 + v.s2 + v.s3, 0), "%", Math.abs(v.s1 + v.s2 + v.s3 - 100) > 0.01 ? ["r", "must be 100"] : ["g", "ok"]], ["Blend grade", fmt(g), "g/t"], ["Oxide share", fmt(o, 1), "%", o > v.olim ? ["r", "over limit"] : ["g", "ok"]], ["Recovered gold per day", fmt(oz, 0), "oz"], ["Value of one crusher hour", "$" + fmt(val, 0), ""]]; } },
+    gc: { title: "Cut-off & dilution", inputs: [["price", "Gold price ($/oz)", 2500], ["roy", "Royalty + selling (%)", 5], ["rec", "Recovery (%)", 92], ["cost", "Processing + G&A ($/t)", 25], ["t", "Ore block (t)", 10000], ["g", "Block grade (g/t)", 2], ["loss", "Ore loss (%)", 5], ["dil", "Dilution (% of ore mined)", 10], ["gw", "Dilution grade (g/t)", 0.2]],
+      calc(v) { const npg = v.price * (1 - v.roy / 100) / 31.1035 * v.rec / 100; const cog = v.cost / npg; const to = v.t * (1 - v.loss / 100), tw = to * v.dil / 100, T = to + tw; const gd = (to * v.g + tw * v.gw) / T; const ozs = v.t * v.g / 31.1035, ozd = T * gd / 31.1035;
+        return [["Net value per in-situ gram", "$" + fmt(npg), "/g"], ["Breakeven cut-off", fmt(cog), "g/t"], ["Tonnes to plant", fmt(T, 0), "t"], ["Delivered grade", fmt(gd), "g/t", gd < v.g * 0.92 ? ["a", Math.round((gd / v.g - 1) * 100) + "% grade"] : ["g", Math.round((gd / v.g - 1) * 100) + "% grade"]], ["Ounces in situ → delivered", fmt(ozs, 0) + " → " + fmt(ozd, 0), "oz", ["a", Math.round((ozd / ozs - 1) * 100) + "% oz"]], ["Block margin (delivered)", "$" + fmt(T * (gd * npg - v.cost), 0), ""]]; } },
+    evm: { title: "Earned value control", inputs: [["bac", "BAC ($M)", 9.6], ["pv", "Planned value PV ($M)", 4.4], ["ev", "Earned value EV ($M)", 4.0], ["ac", "Actual cost AC ($M)", 4.3]],
+      calc(v) { const cpi = v.ev / v.ac, spi = v.ev / v.pv, eac = v.bac / cpi, tcpi = (v.bac - v.ev) / (v.bac - v.ac);
+        return [["CPI = EV/AC", fmt(cpi), "", cpi < 0.9 ? ["r", "cost-recovery review"] : cpi < 0.95 ? ["a", "escalate"] : ["g", "on track"]], ["SPI = EV/PV", fmt(spi), "", spi < 0.9 ? ["r", "re-baseline if 2 weeks"] : spi < 0.95 ? ["a", "watch"] : ["g", "on track"]], ["Cost variance CV", fmt(v.ev - v.ac), "$M"], ["Schedule variance SV", fmt(v.ev - v.pv), "$M"], ["EAC = BAC/CPI", fmt(eac), "$M"], ["VAC = BAC − EAC", fmt(v.bac - eac), "$M"], ["TCPI", fmt(tcpi), "", tcpi > 1.1 ? ["r", "not credible without change"] : tcpi > 1 ? ["a", "stretch"] : ["g", "achievable"]]]; } }
+  };
+
+  function renderTool(p, id) {
+    const t = TOOLS[id]; const box = document.createElement("div");
+    box.innerHTML = `<div class="eyebrow" style="margin-bottom:6px">Field tool</div><h3 style="margin-bottom:12px">${t.title}</h3>
+      <div class="calc"><div class="fields">${t.inputs.map(([k, l, d]) => `<label for="t-${id}-${k}">${l}<input id="t-${id}-${k}" type="number" step="any" value="${d}"></label>`).join("")}</div><div class="out" id="o-${id}"></div></div>
+      <p style="font-size:.8rem;color:var(--muted);margin-top:10px">Defaults reproduce the module exercise. Replace them with your site data.</p>`;
+    if (p.id === "panel" && !p.dataset.keep) p.innerHTML = "";
+    p.appendChild(box);
+    const run = () => { const v = {}; t.inputs.forEach(([k]) => v[k] = parseFloat($("#t-" + id + "-" + k, box).value) || 0);
+      $("#o-" + id, box).innerHTML = t.calc(v).map(r => { const fl = Array.isArray(r[r.length - 1]) ? r[r.length - 1] : null; const unit = typeof r[2] === "string" ? r[2] : ""; return `<div><span>${r[0]}</span><b>${r[1]} ${unit}${fl ? `<span class="flag ${fl[0]}">${fl[1]}</span>` : ""}</b></div>`; }).join(""); };
+    box.querySelectorAll("input").forEach(i => i.addEventListener("input", run)); run();
+  }
+
+  /* ---------------- blast timing simulator ---------------- */
+  function renderSim(p) {
+    const box = document.createElement("div"); box.className = "sim";
+    box.innerHTML = `<div class="eyebrow" style="margin-bottom:6px">Timing simulator</div><h3 style="margin-bottom:8px">Firing sequence, 8 ms windows and vibration</h3>
+      <p style="font-size:.9rem;color:var(--muted)">Each hole fires at its surface delay plus a 500 ms in-hole delay. Pyrotechnic scatter is applied to that total, which is why long in-hole delays can make neighbouring holes fire inside the same 8 ms window.</p>
+      <div class="simgrid"><div class="fields">
+        <label>Rows<input id="sm-rows" type="number" value="4" min="1" max="8"></label><label>Holes per row<input id="sm-cols" type="number" value="10" min="2" max="16"></label>
+        <label>Hole-to-hole (ms)<input id="sm-h" type="number" value="17"></label><label>Row-to-row (ms)<input id="sm-r" type="number" value="42"></label>
+        <label>Tie-up<select id="sm-mode"><option value="v">V (chevron) from centre</option><option value="row">Row by row from one end</option></select></label>
+        <label>Scatter (% of total delay)<select id="sm-sc"><option value="0">0 · electronic</option><option value="1">±1%</option><option value="3" selected>±3% · pyrotechnic</option><option value="5">±5%</option></select></label>
+        <label>Burden (m)<input id="sm-b" type="number" value="3.5" step="0.1"></label><label>Charge per hole (kg)<input id="sm-q" type="number" value="75.1" step="0.1"></label>
+        <label>Distance to receiver (m)<input id="sm-d" type="number" value="600"></label><label>PPV limit (mm/s)<input id="sm-l" type="number" value="10"></label>
+        <div class="row" style="grid-column:1/-1;margin-top:4px"><button class="btn" id="sm-play" type="button">Fire</button><button class="ghost" id="sm-roll" type="button">New scatter draw</button></div>
+      </div><div style="display:grid;gap:10px;min-width:0"><div class="plan" id="sm-plan"></div><div class="out" id="sm-out"></div></div></div>`;
+    p.appendChild(box);
+    let seed = 7, raf = null;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const g = id => parseFloat($("#" + id, box).value) || 0;
+    function model() {
+      const R = Math.max(1, Math.min(8, Math.round(g("sm-rows")))), C = Math.max(2, Math.min(16, Math.round(g("sm-cols"))));
+      const h = g("sm-h"), r = g("sm-r"), sc = g("sm-sc") / 100, mode = $("#sm-mode", box).value; const mid = (C - 1) / 2;
+      const s0 = seed; const holes = [];
+      for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+        const surf = mode === "v" ? Math.round(Math.abs(j + (i % 2 ? 0.5 : 0) - mid) * h + i * r) : j * h + i * r;
+        const tot = surf + 500; const t = tot * (1 + (rnd() * 2 - 1) * sc);
+        holes.push({ i, j, surf, t: t - 500 });
+      }
+      seed = s0;
+      const ts = holes.map(x => x.t).sort((a, b) => a - b); let mx = 0, at = 0;
+      for (let a = 0, b = 0; a < ts.length; a++) { while (b < ts.length && ts[b] < ts[a] + 8) b++; if (b - a > mx) { mx = b - a; at = ts[a]; } }
+      return { R, C, holes, mx, at, span: ts[ts.length - 1] - ts[0], h, r };
+    }
+    function draw(tNow) {
+      const m = model(); const W = 40 + m.C * 34 + 20, Hh = 30 + m.R * 34 + 90;
+      const bins = {}; m.holes.forEach(x => { const k = Math.floor(x.t / 8); bins[k] = (bins[k] || 0) + 1; });
+      const keys = Object.keys(bins).map(Number); const kmin = Math.min(...keys), kmax = Math.max(...keys); const bw = (W - 60) / (kmax - kmin + 1);
+      const limQ = Math.pow(g("sm-d") / Math.pow(1140 / g("sm-l"), 1 / 1.6), 2), limN = limQ / (g("sm-q") || 1);
+      let s = `<svg viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blast pattern firing times">`;
+      s += `<line x1="20" y1="${30 + m.R * 34 - 8}" x2="${W - 10}" y2="${30 + m.R * 34 - 8}" stroke="var(--ink)" stroke-width="2"/><text x="20" y="${30 + m.R * 34 + 4}">FREE FACE</text>`;
+      m.holes.forEach(x => { const cx = 40 + x.j * 34 + (x.i % 2 ? 17 : 0), cy = 30 + (m.R - 1 - x.i) * 34; const st2 = tNow == null ? "" : tNow >= x.t + 40 ? "d" : tNow >= x.t ? "f" : ""; s += `<circle class="h ${st2}" cx="${cx}" cy="${cy}" r="8"/><text x="${cx}" y="${cy + 18}" text-anchor="middle">${Math.round(x.t)}</text>`; });
+      const by = Hh - 14; s += `<line class="axis" x1="40" y1="${by}" x2="${W - 20}" y2="${by}"/><text x="40" y="${Hh - 2}">holes per 8 ms bin · red = above vibration limit</text>`;
+      const maxb = Math.max(...Object.values(bins), limN);
+      keys.forEach(k => { const n = bins[k], hgt = n / maxb * 52; s += `<rect class="bar ${n > limN ? "over" : ""}" x="${40 + (k - kmin) * bw}" y="${by - hgt}" width="${Math.max(1, bw - 1)}" height="${hgt}"/>`; });
+      if (tNow != null) { const x = 40 + (tNow / 8 - kmin) * bw; if (x <= W - 20) s += `<line x1="${x}" y1="${by - 56}" x2="${x}" y2="${by}" stroke="var(--bad)" stroke-width="1.5"/>`; }
+      $("#sm-plan", box).innerHTML = s + "</svg>";
+      const Q = g("sm-q"), mic = m.mx * Q, ppv = 1140 * Math.pow(g("sm-d") / Math.sqrt(mic), -1.6); const rpm = m.r / (g("sm-b") || 1);
+      $("#sm-out", box).innerHTML = [["Max holes in any 8 ms window", m.mx, m.mx > limN ? ["r", "> " + Math.floor(limN) + " allowed"] : ["g", "≤ " + Math.floor(limN)]], ["Maximum instantaneous charge", fmt(mic, 0) + " kg", null], ["Predicted PPV (k 1140, β 1.6)", fmt(ppv, 1) + " mm/s", ppv > g("sm-l") ? ["r", "exceeds"] : ["g", "ok"]], ["Row delay per metre of burden", fmt(rpm, 1) + " ms/m", rpm < 6.5 ? ["r", "< 6.5: violent, backbreak"] : rpm > 13 ? ["a", "> 13: scattered pile"] : ["g", "6.5–13"]], ["Hole-to-hole vs 8 ms", m.h < 8 ? "overlap by design" : "separated", m.h < 8 ? ["r", "< 8 ms"] : ["g", "≥ 8 ms"]], ["Blast duration", fmt(m.span, 0) + " ms", null]].map(r => `<div><span>${r[0]}</span><b>${r[1]}${r[2] ? `<span class="flag ${r[2][0]}">${r[2][1]}</span>` : ""}</b></div>`).join("");
+      return m;
+    }
+    box.querySelectorAll("input,select").forEach(i => i.addEventListener("input", () => { cancelAnimationFrame(raf); draw(); }));
+    $("#sm-roll", box).onclick = () => { seed = (seed * 48271) % 2147483647 || 11; cancelAnimationFrame(raf); draw(); };
+    $("#sm-play", box).onclick = () => { cancelAnimationFrame(raf); const m = draw(); const t0 = performance.now(), end = m.span + 80; const step = now => { const t = (now - t0) / (reduce ? 1 : 12); draw(Math.min(t, end)); if (t < end) raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); };
+    draw();
+  }
+
+  /* ---------------- exam ---------------- */
+  function exam(cid) {
+    const c = cyc(cid), qs = A.exams[cid];
+    if (!examUnlocked(cid)) { go(cid); return; }
+    $("#app").innerHTML = `<section class="wrap block">
+      <div class="mod-head"><button class="ghost" id="back" type="button">← Cycle ${c.n} · ${esc(c.name)}</button></div>
+      <div class="eyebrow">End-of-cycle exam · pass mark ${A.passMark * 100}%</div><h2 style="margin:6px 0 16px">Cycle ${c.n} · ${esc(c.name)}</h2>
+      <div id="res"></div>
+      <form id="exam">${qs.map((q, i) => `<fieldset class="q" id="q${i}" style="margin-inline:0"><legend class="qt">${i + 1}. ${esc(q.q)}</legend>${q.o.map((o, j) => `<label><input type="radio" name="q${i}" value="${j}"> <span>${esc(o)}</span></label>`).join("")}<div class="why" hidden></div></fieldset>`).join("")}
+      <div class="row"><button class="btn dark" type="submit">Submit answers</button><span style="font-size:.85rem;color:var(--muted)">Unanswered questions count as wrong.</span></div></form></section>`;
+    $("#back").onclick = () => go(cid);
+    $("#exam").addEventListener("submit", e => {
+      e.preventDefault(); let ok = 0;
+      qs.forEach((q, i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); const right = sel && +sel.value === q.a; if (right) ok++; const f = $("#q" + i); f.className = "q " + (right ? "right" : "wrong"); const w = f.querySelector(".why"); w.hidden = false; w.innerHTML = `<b>${right ? "Correct" : "Answer: " + esc(q.o[q.a])}.</b> ${esc(q.why)}`; });
+      const sc = ok / qs.length, pass = sc >= A.passMark; const prev = st.exams[cid] || {};
+      st.exams[cid] = { best: Math.max(sc, prev.best || 0), passed: prev.passed || pass, date: pass ? new Date().toISOString().slice(0, 10) : prev.date }; save(); chips();
+      const nextC = A.cycles[c.n];
+      $("#res").innerHTML = `<div class="score"><span class="big">${Math.round(sc * 100)}%</span><div><b>${ok}/${qs.length} correct · ${pass ? "Pass" : "Not yet: 80% needed"}</b><br><span style="font-size:.9rem;color:var(--muted)">${pass ? (nextC ? "Cycle " + nextC.n + " (" + esc(nextC.name) + ") exam is now unlocked." : "Programme complete.") : "Review the explanations below, revisit the modules, then retake."}</span></div></div>${pass ? certificate(c, sc) : ""}`;
+      const nm = $("#certname"); if (nm) nm.addEventListener("input", () => { st.name = nm.value; save(); $("#certwho").textContent = nm.value || "Your name"; });
+      window.scrollTo(0, 0);
+    });
+    window.scrollTo(0, 0);
+  }
+  function certificate(c, sc) {
+    return `<div class="cert"><div class="eyebrow">Bench to Boardroom · certificate of completion</div><div class="who" id="certwho">${esc(st.name || "Your name")}</div><div>has passed <b>Cycle ${c.n} · ${esc(c.name)}</b> with a score of <b>${Math.round(sc * 100)}%</b> on ${new Date().toISOString().slice(0, 10)}.</div><div style="font-size:.85rem;color:var(--muted)">Load & Haul · Drilling · Blasting · Dewatering · Crusher Feed · Grade Control</div><label style="display:grid;gap:4px;font-size:.8rem;color:var(--muted);width:min(320px,100%)">Name on certificate<input type="text" id="certname" value="${esc(st.name)}"></label><div style="font-size:.8rem;color:var(--muted)">Take a screenshot for the training file. Field sign-off by a supervisor is still required.</div></div>`;
+  }
+
+  /* ---------------- router ---------------- */
+  function go(h) { if (location.hash.slice(1) !== h) location.hash = h; else route(); }
+  function route() {
+    const h = location.hash.slice(1); chips();
+    const cy = A.cycles.map(c => c.id);
+    if (h.startsWith("exam-") && cy.includes(h.slice(5))) { st.cycle = h.slice(5); save(); return exam(h.slice(5)); }
+    const [c, a] = h.split("-");
+    if (cy.includes(c) && a && A.modules[c][a]) { st.cycle = c; save(); chips(); return module(c, a); }
+    if (cy.includes(c)) { st.cycle = c; save(); chips(); }
+    home();
+  }
+  window.addEventListener("hashchange", route);
+  $("#instructor").checked = !!st.instructor;
+  $("#instructor").onchange = e => { st.instructor = e.target.checked; save(); route(); };
+  const rs = $("#reset"); let armed = false;
+  rs.onclick = () => { if (!armed) { armed = true; rs.textContent = "Click again to erase progress"; setTimeout(() => { armed = false; rs.textContent = "Reset progress"; }, 4000); return; } st = { mods: {}, exams: {}, name: "", instructor: false, cycle: "engineer" }; save(); armed = false; rs.textContent = "Reset progress"; $("#instructor").checked = false; go("home"); };
+  route();
+})();
+</script>
+</body>
+</html>
