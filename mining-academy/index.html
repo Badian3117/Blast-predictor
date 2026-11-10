@@ -223,14 +223,18 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
   .chips { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.lang button { border: 0; background: transparent; padding: 5px 9px; font: 600 0.78rem var(--f-mono); cursor: pointer; color: var(--muted); }
+.lang button[aria-pressed="true"] { background: var(--accent); color: #1c2220; }
 </style>
 </head>
 <body>
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="#home"><b>Bench to Boardroom</b><span>Open-pit operations academy</span></a>
+    <a class="brand" href="#home"><b>Bench to Boardroom</b><span id="tagline"></span></a>
     <div class="chips" id="chips"></div>
-    <a class="barlink" href="handbook.html" target="_blank" rel="noopener">Handbook</a>
+    <div class="lang" role="group" aria-label="Language / Langue"><button type="button" data-lang="en">EN</button><button type="button" data-lang="fr">FR</button></div>
+    <a class="barlink" id="hblink" href="handbook.html" target="_blank" rel="noopener"></a>
   </div>
 </header>
 
@@ -238,25 +242,33 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
 
 <footer>
   <div class="wrap">
-    <div>Standards hierarchy: national law (Guinea Mining Code, explosives regulations) → ISEE → USBM RI 8507 / RI 8485 → supplier technical standards → site SOPs. Site rules always win over this course.</div>
-    <label class="toggle"><input type="checkbox" id="instructor"> Instructor mode (unlock all exams)</label>
-    <div>Progress is saved in this browser only. <button class="ghost" id="reset" type="button">Reset progress</button></div>
+    <div id="foot-std"></div>
+    <label class="toggle"><input type="checkbox" id="instructor"> <span id="foot-instr"></span></label>
+    <div><span id="foot-save"></span> <button class="ghost" id="reset" type="button"></button></div>
   </div>
 </footer>
 
 <script src="content.js"></script>
+<script src="fr-1.js"></script>
+<script src="fr-2.js"></script>
+<script src="fr-3.js"></script>
+<script src="i18n.js"></script>
 <script src="illustrations.js"></script>
 <script>
 (function () {
-  const A = window.ACADEMY, SC = window.SCENES;
+  const SC = window.SCENES;
   const $ = (s, r = document) => r.querySelector(s);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const KEY = "b2b-progress-v1";
-  let st = { mods: {}, exams: {}, name: "", instructor: false, cycle: "engineer" };
+  let st = { mods: {}, exams: {}, name: "", instructor: false, cycle: "engineer", lang: null };
   try { const raw = localStorage.getItem(KEY); if (raw) st = Object.assign(st, JSON.parse(raw)); } catch (e) {}
+  if (!st.lang) st.lang = /^fr/i.test(navigator.language || "") ? "fr" : "en";
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let paused = reduce;
+  let A = window.academyFor(st.lang);
+  const t = (en, fr) => (st.lang === "fr" ? fr : en);
+  const ACT_EN = Object.fromEntries(window.ACADEMY.activities.map(a => [a.id, a.name]));
 
   const cyc = id => A.cycles.find(c => c.id === id);
   const act = id => A.activities.find(a => a.id === id);
@@ -264,14 +276,29 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
   const modState = (c, a) => st.mods[modKey(c, a)] || { ex: {}, done: false, seen: false };
   const cycleDone = c => A.activities.filter(a => modState(c, a.id).done).length;
   const examUnlocked = c => { if (st.instructor) return true; const i = A.cycles.findIndex(x => x.id === c); return i === 0 || !!(st.exams[A.cycles[i - 1].id] || {}).passed; };
-  const fmt = (v, d = 2) => isFinite(v) ? Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
+  const fmt = (v, d = 2) => isFinite(v) ? Number(v).toLocaleString(st.lang === "fr" ? "fr-FR" : "en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
+  const pct = v => Math.round(v * 100) + (st.lang === "fr" ? " %" : "%");
+  const altName = a => st.lang === "fr" ? ACT_EN[a.id] : a.fr;   /* the other language, shown as a subtitle */
 
   function applyMotion(root = document) { root.querySelectorAll("svg").forEach(s => { try { paused ? s.pauseAnimations() : s.unpauseAnimations(); } catch (e) {} }); }
+
+  function chrome() {
+    document.documentElement.lang = st.lang;
+    SC.lang = st.lang;
+    $("#tagline").textContent = t("Open-pit operations academy", "Académie des opérations à ciel ouvert");
+    $("#hblink").textContent = t("Handbook", "Manuel");
+    $("#foot-std").textContent = t("Standards hierarchy: national law (Guinea Mining Code, explosives regulations) → ISEE → USBM RI 8507 / RI 8485 → supplier technical standards → site SOPs. Site rules always win over this course.",
+      "Hiérarchie des normes : loi nationale (Code minier guinéen, réglementation des explosifs) → ISEE → USBM RI 8507 / RI 8485 → standards techniques du fournisseur → procédures du site. Les règles du site priment toujours sur ce cours.");
+    $("#foot-instr").textContent = t("Instructor mode (unlock all exams)", "Mode formateur (débloque tous les examens)");
+    $("#foot-save").textContent = t("Progress is saved on this computer only.", "La progression est enregistrée sur cet ordinateur uniquement.");
+    $("#reset").textContent = t("Reset progress", "Réinitialiser");
+    document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === st.lang));
+  }
 
   function chips() {
     $("#chips").innerHTML = A.cycles.map(c => {
       const e = st.exams[c.id] || {}; const n = cycleDone(c.id);
-      return `<span class="chip ${e.passed ? "pass" : ""} ${st.cycle === c.id ? "on" : ""}">C${c.n} ${esc(c.name)} · ${e.passed ? "passed " + Math.round(e.best * 100) + "%" : n + "/6"}</span>`;
+      return `<span class="chip ${e.passed ? "pass" : ""} ${st.cycle === c.id ? "on" : ""}" title="${esc(c.name)}">C${c.n} · ${e.passed ? "✓ " + pct(e.best) : n + "/6"}</span>`;
     }).join("");
   }
 
@@ -282,42 +309,42 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
     $("#app").innerHTML = `
       <div class="wrap hero">
         <div class="hero-top">
-          <div><div class="eyebrow">Drill & blast · load & haul · water · plant feed · grade control</div>
-            <h1>From the bench<br>to the boardroom</h1></div>
-          <div><p class="lede">A three-cycle programme for open-pit engineers: six field activities per cycle, each with a course, field tips, a graded exercise and a working calculator. Pass the cycle exam at 80% to move up.</p></div>
+          <div><div class="eyebrow">${t("Drill & blast · load & haul · water · plant feed · grade control", "Forage-tir · chargement-transport · eau · alimentation usine · contrôle des teneurs")}</div>
+            <h1>${t("From the bench<br>to the boardroom", "Du gradin<br>à la direction")}</h1></div>
+          <div><p class="lede">${t("A three-cycle programme for open-pit engineers: six field activities per cycle, each with a course, field tips, a graded exercise and a working calculator. Pass the cycle exam at 80% to move up.", "Un programme en trois cycles pour les ingénieurs de mines à ciel ouvert : six activités de terrain par cycle, chacune avec un cours, des conseils de terrain, un exercice noté et un calculateur. Réussissez l'examen du cycle à 80 % pour passer au niveau suivant.")}</p></div>
         </div>
-        <div class="steps"><div><b>Course</b><span>Principles, formulas, standards</span></div><div><b>Field tips</b><span>What the pit teaches you</span></div><div><b>Exercise</b><span>Numbers checked to tolerance</span></div><div><b>Exam</b><span>15 questions · pass 80%</span></div></div>
-        <div class="figure">${SC.hero()}<div class="cap"><span>Select an activity in the section to open its ${esc(c.name)} module.</span><button class="ghost" id="motion" type="button">${paused ? "Play animation" : "Pause animation"}</button></div></div>
+        <div class="steps"><div><b>${t("Course", "Cours")}</b><span>${t("Principles, formulas, standards", "Principes, formules, normes")}</span></div><div><b>${t("Field tips", "Conseils terrain")}</b><span>${t("What the pit teaches you", "Ce que la fosse vous apprend")}</span></div><div><b>${t("Exercise", "Exercice")}</b><span>${t("Numbers checked to tolerance", "Résultats vérifiés à la tolérance")}</span></div><div><b>${t("Exam", "Examen")}</b><span>${t("15 questions · pass 80%", "15 questions · réussite 80 %")}</span></div></div>
+        <div class="figure">${SC.hero()}<div class="cap"><span>${t("Select an activity in the section to open its " + esc(c.name) + " module.", "Choisissez une activité dans la coupe pour ouvrir son module " + esc(c.name) + ".")}</span><button class="ghost" id="motion" type="button">${paused ? t("Play animation", "Lancer l'animation") : t("Pause animation", "Mettre en pause")}</button></div></div>
       </div>
       <section class="wrap block">
-        <div class="cycles" role="tablist" aria-label="Career cycles">${A.cycles.map(x => {
+        <div class="cycles" role="tablist" aria-label="${t("Career cycles", "Cycles de carrière")}">${A.cycles.map(x => {
           const k = cycleDone(x.id), e = st.exams[x.id] || {};
-          return `<button class="cyc" role="tab" aria-selected="${x.id === c.id}" data-cyc="${x.id}"><span class="eyebrow">Cycle ${x.n} · ${esc(x.years)}</span><span class="t">${esc(x.name)}</span><span class="s">${k}/6 modules · ${e.passed ? "exam passed" : e.best != null ? "best " + Math.round(e.best * 100) + "%" : "exam not taken"}</span><span class="meter"><i style="width:${(k / 6) * 100}%"></i></span></button>`;
+          return `<button class="cyc" role="tab" aria-selected="${x.id === c.id}" data-cyc="${x.id}"><span class="eyebrow">${t("Cycle", "Cycle")} ${x.n} · ${esc(x.years)}</span><span class="t">${esc(x.name)}</span><span class="s">${k}/6 ${t("modules", "modules")} · ${e.passed ? t("exam passed", "examen réussi") : e.best != null ? t("best ", "meilleur ") + pct(e.best) : t("exam not taken", "examen non passé")}</span><span class="meter"><i style="width:${(k / 6) * 100}%"></i></span></button>`;
         }).join("")}</div>
         <div class="cycinfo">
-          <div><h2>${esc(c.name)}</h2><p style="margin-top:8px">${esc(c.role)}</p><p><b>Goal of the cycle:</b> ${esc(c.goal)}</p></div>
-          <div><div class="eyebrow" style="margin-bottom:8px">Competencies assessed</div><ul class="comp">${c.competencies.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+          <div><h2>${esc(c.name)}</h2><p style="margin-top:8px">${esc(c.role)}</p><p><b>${t("Goal of the cycle:", "Objectif du cycle :")}</b> ${esc(c.goal)}</p></div>
+          <div><div class="eyebrow" style="margin-bottom:8px">${t("Competencies assessed", "Compétences évaluées")}</div><ul class="comp">${c.competencies.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
         </div>
         <div class="grid">${A.activities.map(a => {
           const m = A.modules[c.id][a.id], s = modState(c.id, a.id);
           const solved = Object.values(s.ex || {}).filter(Boolean).length;
           const cls = s.done ? "done" : (s.seen || solved) ? "prog" : "";
-          return `<button class="card" data-mod="${a.id}"><span class="status ${cls}">${s.done ? "Complete" : cls ? "In progress" : "Not started"}</span><span class="t">${esc(a.name)}</span><span class="fr">${esc(a.fr)}</span><span class="m">${esc(m.title)}</span></button>`;
+          return `<button class="card" data-mod="${a.id}"><span class="status ${cls}">${s.done ? t("Complete", "Terminé") : cls ? t("In progress", "En cours") : t("Not started", "Non commencé")}</span><span class="t">${esc(a.name)}</span><span class="fr">${esc(altName(a))}</span><span class="m">${esc(m.title)}</span></button>`;
         }).join("")}</div>
         <div class="examcard">
-          <div><div class="eyebrow">End-of-cycle exam</div><h3 style="margin-top:4px">Cycle ${c.n} · ${esc(c.name)} exam</h3><span style="font-size:.9rem;color:var(--muted)">${A.exams[c.id].length} questions · pass mark ${A.passMark * 100}% · ${n}/6 modules complete${ex.best != null ? " · best " + Math.round(ex.best * 100) + "%" : ""}</span></div>
-          <button class="btn dark" id="sit" ${examUnlocked(c.id) ? "" : "disabled"}>${examUnlocked(c.id) ? (ex.passed ? "Retake exam" : "Sit the exam") : "Pass Cycle " + (c.n - 1) + " first"}</button>
+          <div><div class="eyebrow">${t("End-of-cycle exam", "Examen de fin de cycle")}</div><h3 style="margin-top:4px">${t("Cycle", "Cycle")} ${c.n} · ${t(esc(c.name) + " exam", "examen " + esc(c.name))}</h3><span style="font-size:.9rem;color:var(--muted)">${A.exams[c.id].length} ${t("questions · pass mark", "questions · seuil de réussite")} ${pct(A.passMark)} · ${n}/6 ${t("modules complete", "modules terminés")}${ex.best != null ? " · " + t("best ", "meilleur ") + pct(ex.best) : ""}</span></div>
+          <button class="btn dark" id="sit" ${examUnlocked(c.id) ? "" : "disabled"}>${examUnlocked(c.id) ? (ex.passed ? t("Retake exam", "Repasser l'examen") : t("Sit the exam", "Passer l'examen")) : t("Pass Cycle " + (c.n - 1) + " first", "Réussir d'abord le cycle " + (c.n - 1))}</button>
         </div>
       </section>
       <section class="wrap block">
-        <div class="eyebrow">Professor's corrections</div><h2 style="margin:6px 0 14px">Errors that travel from site to site</h2>
+        <div class="eyebrow">${t("Professor's corrections", "Corrections du professeur")}</div><h2 style="margin:6px 0 14px">${t("Errors that travel from site to site", "Erreurs qui voyagent de site en site")}</h2>
         <div class="corr">${A.corrections.map(x => `<div class="box"><div class="claim">${esc(x.claim)}</div><p>${esc(x.fix)}</p></div>`).join("")}</div>
       </section>`;
     $("#app").querySelectorAll("[data-cyc]").forEach(b => b.onclick = () => { st.cycle = b.dataset.cyc; save(); go(st.cycle); });
     $("#app").querySelectorAll("[data-mod]").forEach(b => b.onclick = () => go(st.cycle + "-" + b.dataset.mod));
     $("#app").querySelectorAll(".hot").forEach(g => { const f = () => go(st.cycle + "-" + g.dataset.act); g.addEventListener("click", f); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }); });
     $("#sit").onclick = () => go("exam-" + c.id);
-    $("#motion").onclick = () => { paused = !paused; applyMotion(); $("#motion").textContent = paused ? "Play animation" : "Pause animation"; };
+    $("#motion").onclick = () => { paused = !paused; applyMotion(); $("#motion").textContent = paused ? t("Play animation", "Lancer l'animation") : t("Pause animation", "Mettre en pause"); };
     applyMotion();
   }
 
@@ -330,36 +357,41 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
     $("#app").innerHTML = `
       <section class="wrap block">
         <div class="mod-head">
-          <button class="ghost" id="back" type="button">← Cycle ${c.n} · ${esc(c.name)}</button>
-          <span class="status ${s.done ? "done" : "prog"}" id="mstat">${s.done ? "Complete" : "In progress"}</span>
+          <button class="ghost" id="back" type="button">← ${t("Cycle", "Cycle")} ${c.n} · ${esc(c.name)}</button>
+          <span class="status ${s.done ? "done" : "prog"}" id="mstat">${s.done ? t("Complete", "Terminé") : t("In progress", "En cours")}</span>
         </div>
-        <div class="eyebrow">Cycle ${c.n} · ${esc(a.name)} · ${esc(a.fr)}</div>
+        <div class="eyebrow">${t("Cycle", "Cycle")} ${c.n} · ${esc(a.name)} · ${esc(altName(a))}</div>
         <h2 style="margin:6px 0 14px">${esc(m.title)}</h2>
         <div class="figure">${SC[aid]()}</div>
-        <div class="tabs" role="tablist">${[["course", "Course"], ["tips", "Field tips"], ["exercise", "Exercise"], ["tool", aid === "blasting" ? "Field tool + timing simulator" : "Field tool"]].map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join("")}</div>
+        <div class="tabs" role="tablist">${[["course", t("Course", "Cours")], ["tips", t("Field tips", "Conseils terrain")], ["exercise", t("Exercise", "Exercice")], ["tool", aid === "blasting" ? t("Field tool + timing simulator", "Outil terrain + simulateur de séquence") : t("Field tool", "Outil terrain")]].map(([k, l]) => `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join("")}</div>
         <div id="panel" class="panel"></div>
         <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:14px">
-          <button class="btn" id="done" type="button">${s.done ? "Marked complete ✓" : "Mark module complete"}</button>
-          ${next ? `<button class="ghost" id="next" type="button">Next: ${esc(next.name)} →</button>` : `<button class="ghost" id="next" type="button">Go to the Cycle ${c.n} exam →</button>`}
+          <button class="btn" id="done" type="button">${s.done ? t("Marked complete ✓", "Module terminé ✓") : t("Mark module complete", "Marquer le module terminé")}</button>
+          <button class="ghost" id="next" type="button">${next ? t("Next: ", "Suivant : ") + esc(next.name) + " →" : t("Go to the Cycle " + c.n + " exam →", "Aller à l'examen du cycle " + c.n + " →")}</button>
         </div>
       </section>`;
     const show = k => {
-      $("#app").querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.tab === k));
+      $("#app").querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === k));
       const p = $("#panel");
       if (k === "course") p.innerHTML = `<div class="two"><div>
-          <div class="box" style="margin-bottom:16px"><h4>Learning objectives</h4><ul class="comp">${m.objectives.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>
+          <div class="box" style="margin-bottom:16px"><h4>${t("Learning objectives", "Objectifs pédagogiques")}</h4><ul class="comp">${m.objectives.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>
           ${m.lessons.map(l => `<div class="lesson"><h3>${l.h}</h3>${l.body}</div>`).join("")}</div>
-          <div class="side"><div class="box"><h4>Formula card</h4>${m.formulas.map(f => `<div class="formula"><span class="n">${f.name}</span><span class="f">${f.f}</span>${f.note ? `<span class="n">${f.note}</span>` : ""}</div>`).join("")}</div>
-          <div class="box prof"><h4>Professor's note</h4><p>${esc(m.prof)}</p></div></div></div>`;
-      if (k === "tips") p.innerHTML = `<ol class="tips">${m.tips.map(t => `<li>${t}</li>`).join("")}</ol>`;
+          <div class="side"><div class="box"><h4>${t("Formula card", "Fiche formules")}</h4>${m.formulas.map(f => `<div class="formula"><span class="n">${f.name}</span><span class="f">${f.f}</span>${f.note ? `<span class="n">${f.note}</span>` : ""}</div>`).join("")}</div>
+          <div class="box prof"><h4>${t("Professor's note", "Note du professeur")}</h4><p>${esc(m.prof)}</p></div></div></div>`;
+      if (k === "tips") p.innerHTML = `<ol class="tips">${m.tips.map(x => `<li>${x}</li>`).join("")}</ol>`;
       if (k === "exercise") renderExercise(p, cid, aid, m.exercise);
-      if (k === "tool") { renderTool(p, m.tool); if (aid === "blasting") renderSim(p); if (cid === "pm" && m.tool === "evm") { /* PM modules also get the activity tool */ const extra = document.createElement("div"); extra.style.marginTop = "26px"; p.appendChild(extra); renderTool(extra, aid === "loadhaul" ? "haul" : aid === "drilling" ? "drill" : aid === "blasting" ? "blast" : aid === "dewatering" ? "water" : aid === "crusher" ? "feed" : "gc"); } }
+      if (k === "tool") {
+        p.innerHTML = "";
+        renderTool(p, m.tool);
+        if (aid === "blasting") renderSim(p);
+        if (m.tool === "evm") { const extra = document.createElement("div"); extra.style.marginTop = "26px"; p.appendChild(extra); renderTool(extra, { loadhaul: "haul", drilling: "drill", blasting: "blast", dewatering: "water", crusher: "feed", gc: "gc" }[aid]); }
+      }
       applyMotion(p);
     };
-    $("#app").querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.tab));
+    $("#app").querySelectorAll(".tab").forEach(x => x.onclick = () => show(x.dataset.tab));
     show(tab);
     $("#back").onclick = () => go(cid);
-    $("#done").onclick = () => { s.done = true; save(); $("#done").textContent = "Marked complete ✓"; $("#mstat").className = "status done"; $("#mstat").textContent = "Complete"; chips(); };
+    $("#done").onclick = () => { s.done = true; save(); $("#done").textContent = t("Marked complete ✓", "Module terminé ✓"); $("#mstat").className = "status done"; $("#mstat").textContent = t("Complete", "Terminé"); chips(); };
     $("#next").onclick = () => go(next ? cid + "-" + next.id : "exam-" + cid);
     applyMotion();
     window.scrollTo(0, 0);
@@ -367,15 +399,15 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
 
   function renderExercise(p, cid, aid, ex) {
     const s = modState(cid, aid);
-    p.innerHTML = `<div class="ex-intro"><div class="eyebrow" style="margin-bottom:6px">Data</div>${esc(ex.intro)}</div>
-      <div class="parts">${ex.parts.map((q, i) => `<div class="part"><label for="ex${i}">${String.fromCharCode(97 + i)}) ${esc(q.q)}</label><input id="ex${i}" type="number" step="any" inputmode="decimal" placeholder="answer"><span class="unit">${esc(q.unit)}</span><span class="mark" id="mk${i}">${s.ex && s.ex[i] ? "✓" : ""}</span></div>`).join("")}</div>
-      <div class="row"><button class="btn" id="check" type="button">Check answers</button><button class="ghost" id="sol" type="button">Show worked solution</button><span id="exmsg" style="font-size:.9rem;color:var(--muted)"></span></div>
-      <div class="solution box" id="solbox" hidden><h4>Worked solution</h4>${ex.solution}</div>`;
+    p.innerHTML = `<div class="ex-intro"><div class="eyebrow" style="margin-bottom:6px">${t("Data", "Données")}</div>${esc(ex.intro)}</div>
+      <div class="parts">${ex.parts.map((q, i) => `<div class="part"><label for="ex${i}">${String.fromCharCode(97 + i)}) ${esc(q.q)}</label><input id="ex${i}" type="text" inputmode="decimal" autocomplete="off" placeholder="${t("answer", "réponse")}"><span class="unit">${esc(q.unit)}</span><span class="mark" id="mk${i}">${s.ex && s.ex[i] ? "✓" : ""}</span></div>`).join("")}</div>
+      <div class="row"><button class="btn" id="check" type="button">${t("Check answers", "Vérifier")}</button><button class="ghost" id="sol" type="button">${t("Show worked solution", "Voir la solution détaillée")}</button><span id="exmsg" style="font-size:.9rem;color:var(--muted)"></span></div>
+      <div class="solution box" id="solbox" hidden><h4>${t("Worked solution", "Solution détaillée")}</h4>${ex.solution}</div>`;
     ex.parts.forEach((q, i) => { if (s.ex && s.ex[i]) $("#mk" + i).className = "mark ok"; });
     $("#check").onclick = () => {
       let ok = 0;
       ex.parts.forEach((q, i) => {
-        const v = parseFloat($("#ex" + i).value.replace(",", "."));
+        const v = parseFloat($("#ex" + i).value.replace(/[\s  ]/g, "").replace(",", "."));
         const tol = q.tol || Math.abs(q.ans) * 0.01;
         const good = isFinite(v) && Math.abs(v - q.ans) <= tol + 1e-9;
         const mk = $("#mk" + i); mk.textContent = isFinite(v) ? (good ? "✓" : "✗") : ""; mk.className = "mark " + (good ? "ok" : "no");
@@ -384,62 +416,62 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
       const all = ex.parts.every((q, i) => s.ex[i]);
       if (all) s.done = true;
       st.mods[modKey(cid, aid)] = s; save(); chips();
-      $("#exmsg").textContent = `${ok}/${ex.parts.length} correct.` + (all ? " Module complete." : " Rework the red ones before opening the solution.");
-      if (all) { const d = $("#done"); if (d) d.textContent = "Marked complete ✓"; const ms = $("#mstat"); if (ms) { ms.className = "status done"; ms.textContent = "Complete"; } }
+      $("#exmsg").textContent = `${ok}/${ex.parts.length} ${t("correct.", "justes.")}` + (all ? t(" Module complete.", " Module terminé.") : t(" Rework the red ones before opening the solution.", " Reprenez les réponses en rouge avant d'ouvrir la solution."));
+      if (all) { const d = $("#done"); if (d) d.textContent = t("Marked complete ✓", "Module terminé ✓"); const ms = $("#mstat"); if (ms) { ms.className = "status done"; ms.textContent = t("Complete", "Terminé"); } }
     };
     $("#sol").onclick = () => { $("#solbox").hidden = !$("#solbox").hidden; };
   }
 
   /* ---------------- field tools ---------------- */
+  /* inputs: [key, English label, French label, default] ; outputs: [label, value, unit, flag?] */
   const TOOLS = {
-    haul: { title: "Truck & loader match", inputs: [["bucket", "Bucket capacity (m³)", 12], ["ff", "Fill factor", 0.9], ["sg", "In-situ density (t/m³)", 2.7], ["swell", "Swell factor", 1.4], ["rated", "Truck rated payload (t)", 90], ["bcyc", "Bucket cycle (s)", 30], ["spot", "Truck spot time (s)", 30], ["tcyc", "Truck cycle (min)", 25], ["ntr", "Trucks", 10], ["nld", "Loaders", 1], ["eff", "Efficiency (50/60 = 0.83)", 0.83]],
-      calc(v) { const rl = v.sg / v.swell, pb = v.bucket * v.ff * rl; let n = Math.max(1, Math.floor(v.rated / pb + 1e-9)); const pay = n * pb; const svc = (n * v.bcyc + v.spot) / 60; const mf = (v.ntr * svc) / (v.nld * v.tcyc); const ql = v.nld * 60 / svc * pay * v.eff, qt = v.ntr * 60 / v.tcyc * pay * v.eff; const q = Math.min(ql, qt);
-        return [["Loose density", fmt(rl), "t/m³"], ["Bucket payload", fmt(pb, 1), "t"], ["Passes", n, n < 3 || n > 6 ? ["a", "outside 3–5"] : ["g", "ok"]], ["Truck payload", fmt(pay, 1) + " (" + Math.round(pay / v.rated * 100) + "%)", "t", pay / v.rated < 0.9 ? ["a", "underloaded"] : ["g", "ok"]], ["Loader service time", fmt(svc), "min"], ["Match factor", fmt(mf), mf < 0.9 ? ["a", "loader waits"] : mf > 1.1 ? ["a", "trucks queue"] : ["g", "balanced"]], ["Fleet output", fmt(q, 0), "t/h", ql < qt ? ["a", "loader-limited"] : ["a", "truck-limited"]]]; } },
-    drill: { title: "Drill productivity", inputs: [["H", "Bench height (m)", 10], ["J", "Subdrill (m)", 1], ["ang", "Hole angle from vertical (°)", 0], ["B", "Burden (m)", 3.5], ["S", "Spacing (m)", 4], ["sg", "Rock density (t/m³)", 2.7], ["pr", "Penetration rate (m/h)", 30], ["setup", "Tram + set-up (min/hole)", 4], ["hrs", "Effective hours per shift", 9], ["err", "Angle error (°)", 1]],
+    haul: { title: ["Truck & loader match", "Appariement camions / pelle"], inputs: [["bucket", "Bucket capacity (m³)", "Capacité du godet (m³)", 12], ["ff", "Fill factor", "Taux de remplissage", 0.9], ["sg", "In-situ density (t/m³)", "Densité en place (t/m³)", 2.7], ["swell", "Swell factor", "Coefficient de foisonnement", 1.4], ["rated", "Truck rated payload (t)", "Charge nominale camion (t)", 90], ["bcyc", "Bucket cycle (s)", "Cycle godet (s)", 30], ["spot", "Truck spot time (s)", "Mise à quai (s)", 30], ["tcyc", "Truck cycle (min)", "Cycle camion (min)", 25], ["ntr", "Trucks", "Camions", 10], ["nld", "Loaders", "Pelles", 1], ["eff", "Efficiency (50/60 = 0.83)", "Rendement (50/60 = 0,83)", 0.83]],
+      calc(v) { const rl = v.sg / v.swell, pb = v.bucket * v.ff * rl; const n = Math.max(1, Math.floor(v.rated / pb + 1e-9)); const pay = n * pb; const svc = (n * v.bcyc + v.spot) / 60; const mf = (v.ntr * svc) / (v.nld * v.tcyc); const ql = v.nld * 60 / svc * pay * v.eff, qt = v.ntr * 60 / v.tcyc * pay * v.eff; const q = Math.min(ql, qt);
+        return [[t("Loose density", "Densité foisonnée"), fmt(rl), "t/m³"], [t("Bucket payload", "Charge du godet"), fmt(pb, 1), "t"], [t("Passes", "Passes"), n, "", n < 3 || n > 6 ? ["a", t("outside 3–5", "hors 3–5")] : ["g", "ok"]], [t("Truck payload", "Charge du camion"), fmt(pay, 1) + " (" + pct(pay / v.rated) + ")", "t", pay / v.rated < 0.9 ? ["a", t("underloaded", "sous-chargé")] : ["g", "ok"]], [t("Loader service time", "Temps de service pelle"), fmt(svc), "min"], [t("Match factor", "Facteur d'appariement"), fmt(mf), "", mf < 0.9 ? ["a", t("loader waits", "la pelle attend")] : mf > 1.1 ? ["a", t("trucks queue", "les camions attendent")] : ["g", t("balanced", "équilibré")]], [t("Fleet output", "Production de la flotte"), fmt(q, 0), "t/h", ql < qt ? ["a", t("loader-limited", "limité par la pelle")] : ["a", t("truck-limited", "limité par les camions")]]]; } },
+    drill: { title: ["Drill productivity", "Productivité de foration"], inputs: [["H", "Bench height (m)", "Hauteur de gradin (m)", 10], ["J", "Subdrill (m)", "Surforation (m)", 1], ["ang", "Hole angle from vertical (°)", "Inclinaison / verticale (°)", 0], ["B", "Burden (m)", "Banquette (m)", 3.5], ["S", "Spacing (m)", "Espacement (m)", 4], ["sg", "Rock density (t/m³)", "Densité de la roche (t/m³)", 2.7], ["pr", "Penetration rate (m/h)", "Vitesse de pénétration (m/h)", 30], ["setup", "Tram + set-up (min/hole)", "Déplacement + mise en station (min/trou)", 4], ["hrs", "Effective hours per shift", "Heures effectives par poste", 9], ["err", "Angle error (°)", "Erreur d'angle (°)", 1]],
       calc(v) { const L = v.H / Math.cos(v.ang * Math.PI / 180) + v.J; const tpm = v.B * v.S * v.H * v.sg / L; const th = L / v.pr * 60 + v.setup; const n = Math.floor(v.hrs * 60 / th); const dev = L * Math.tan(v.err * Math.PI / 180);
-        return [["Hole length", fmt(L), "m"], ["Tonnes per drilled metre", fmt(tpm, 1), "t/m"], ["Time per hole", fmt(th, 1), "min"], ["Holes per shift", n, ""], ["Metres per shift", fmt(n * L, 0), "m"], ["Tonnes drilled per shift", fmt(n * L * tpm, 0), "t"], ["Toe displacement from angle error", fmt(dev), "m", dev / v.B > 0.1 ? ["r", Math.round(dev / v.B * 100) + "% of B"] : ["g", Math.round(dev / v.B * 100) + "% of B"]]]; } },
-    blast: { title: "Blast design check", inputs: [["D", "Hole diameter (mm)", 115], ["rho", "Explosive density (g/cm³)", 0.85], ["E", "RWS (ANFO = 100)", 100], ["H", "Bench height (m)", 10], ["J", "Subdrill (m)", 1], ["T", "Stemming (m)", 2.5], ["B", "Burden (m)", 3.5], ["S", "Spacing (m)", 4], ["sgr", "Rock SG", 2.7], ["A", "Kuz-Ram rock factor A", 10], ["hpd", "Holes per 8 ms window", 1], ["dist", "Distance to receiver (m)", 600], ["k", "Site k (metric)", 1140], ["beta", "Site β", 1.6], ["lim", "PPV limit (mm/s)", 10]],
+        return [[t("Hole length", "Longueur du trou"), fmt(L), "m"], [t("Tonnes per drilled metre", "Tonnes par mètre foré"), fmt(tpm, 1), "t/m"], [t("Time per hole", "Temps par trou"), fmt(th, 1), "min"], [t("Holes per shift", "Trous par poste"), n, ""], [t("Metres per shift", "Mètres par poste"), fmt(n * L, 0), "m"], [t("Tonnes drilled per shift", "Tonnes forées par poste"), fmt(n * L * tpm, 0), "t"], [t("Toe displacement from angle error", "Décalage du pied dû à l'erreur d'angle"), fmt(dev), "m", dev / v.B > 0.1 ? ["r", pct(dev / v.B) + t(" of B", " de B")] : ["g", pct(dev / v.B) + t(" of B", " de B")]]]; } },
+    blast: { title: ["Blast design check", "Vérification du plan de tir"], inputs: [["D", "Hole diameter (mm)", "Diamètre du trou (mm)", 115], ["rho", "Explosive density (g/cm³)", "Densité de l'explosif (g/cm³)", 0.85], ["E", "RWS (ANFO = 100)", "PRP (ANFO = 100)", 100], ["H", "Bench height (m)", "Hauteur de gradin (m)", 10], ["J", "Subdrill (m)", "Surforation (m)", 1], ["T", "Stemming (m)", "Bourrage (m)", 2.5], ["B", "Burden (m)", "Banquette (m)", 3.5], ["S", "Spacing (m)", "Espacement (m)", 4], ["sgr", "Rock SG", "Densité de la roche", 2.7], ["A", "Kuz-Ram rock factor A", "Facteur de roche Kuz-Ram A", 10], ["hpd", "Holes per 8 ms window", "Trous par fenêtre de 8 ms", 1], ["dist", "Distance to receiver (m)", "Distance au récepteur (m)", 600], ["k", "Site k (metric)", "k du site (métrique)", 1140], ["beta", "Site β", "β du site", 1.6], ["lim", "PPV limit (mm/s)", "Limite VPP (mm/s)", 10]],
       calc(v) { const q = 7.854e-4 * v.D * v.D * v.rho, L = v.H + v.J, Q = q * (L - v.T), PF = Q / (v.B * v.S * v.H); const x50 = v.A * Math.pow(PF, -0.8) * Math.pow(Q, 1 / 6) * Math.pow(115 / v.E, 19 / 30); const kon = 0.012 * (2 * v.rho / v.sgr + 1.5) * v.D; const mic = Q * v.hpd; const ppv = v.k * Math.pow(v.dist / Math.sqrt(mic), -v.beta); const sdr = Math.pow(v.k / v.lim, 1 / v.beta); const qmax = Math.pow(v.dist / sdr, 2);
-        return [["Linear charge density", fmt(q), "kg/m"], ["Charge per hole", fmt(Q, 1), "kg"], ["Powder factor", fmt(PF, 3), "kg/m³", PF < 0.4 ? ["a", "low"] : PF > 0.85 ? ["a", "high"] : ["g", "typical"]], ["Konya burden guide", fmt(kon), "m", Math.abs(v.B / kon - 1) > 0.15 ? ["a", Math.round((v.B / kon - 1) * 100) + "% vs design"] : ["g", "ok"]], ["Stiffness H/B", fmt(v.H / v.B, 1), "", v.H / v.B < 2 ? ["r", "< 2 blocky"] : v.H / v.B < 3 ? ["a", "2–3 fair"] : ["g", "≥ 3"]], ["Stemming T/B", fmt(v.T / v.B), "", v.T / v.B < 0.7 ? ["r", "< 0.7 flyrock risk"] : ["g", "ok"]], ["Kuz-Ram X50", fmt(x50, 0), "cm"], ["MIC", fmt(mic, 0), "kg"], ["Predicted PPV", fmt(ppv, 1), "mm/s", ppv > v.lim ? ["r", "exceeds limit"] : ppv > 0.8 * v.lim ? ["a", "> 80% of limit"] : ["g", "ok"]], ["Max MIC for limit", fmt(qmax, 0), "kg"], ["Max holes per 8 ms", Math.floor(qmax / Q), ""]]; } },
-    water: { title: "Sump & pump", inputs: [["ha", "Catchment (ha)", 20], ["rain", "Design storm (mm)", 80], ["C", "Runoff coefficient", 0.8], ["np", "Pumps", 2], ["qp", "Flow per pump (L/s)", 75], ["stat", "Static lift (m)", 55], ["L", "Discharge line length (m)", 1000], ["d", "Pipe internal diameter (mm)", 250], ["chw", "Hazen-Williams C", 150], ["eta", "Pump efficiency", 0.65]],
-      calc(v) { const V = v.rain / 1000 * v.ha * 1e4 * v.C, Qt = v.np * v.qp, m3h = Qt * 3.6, t = V / m3h; const Q = Qt / 1000, d = v.d / 1000; const vel = Q / (Math.PI * d * d / 4); const hf = 10.67 * v.L * Math.pow(Q, 1.852) / (Math.pow(v.chw, 1.852) * Math.pow(d, 4.87)); const H = v.stat + hf; const P = 9.81 * Q * H / v.eta;
-        return [["Storm runoff volume", fmt(V, 0), "m³"], ["Pumping capacity", fmt(m3h, 0), "m³/h"], ["Pump-out time", fmt(t, 1), "h", t > 24 ? ["r", "> 24 h"] : t > 12 ? ["a", "12–24 h"] : ["g", "< 12 h"]], ["Pipe velocity (single line)", fmt(vel), "m/s", vel > 3 ? ["a", "high friction"] : vel < 1 ? ["a", "settling risk"] : ["g", "ok"]], ["Friction loss", fmt(hf, 1), "m"], ["Total dynamic head", fmt(H, 1), "m"], ["Shaft power (total)", fmt(P, 0), "kW"]]; } },
-    feed: { title: "Crusher blend", inputs: [["s1", "HG share (%)", 60], ["g1", "HG grade (g/t)", 1.8], ["o1", "HG oxide (%)", 20], ["s2", "MG share (%)", 0], ["g2", "MG grade (g/t)", 1.2], ["o2", "MG oxide (%)", 40], ["s3", "LG share (%)", 40], ["g3", "LG grade (g/t)", 0.9], ["o3", "LG oxide (%)", 50], ["olim", "Oxide limit (%)", 35], ["tph", "Crusher rate (t/h)", 450], ["rec", "Recovery (%)", 92], ["price", "Gold price ($/oz)", 2500]],
+        return [[t("Linear charge density", "Charge linéique"), fmt(q), "kg/m"], [t("Charge per hole", "Charge par trou"), fmt(Q, 1), "kg"], [t("Powder factor", "Consommation spécifique"), fmt(PF, 3), "kg/m³", PF < 0.4 ? ["a", t("low", "faible")] : PF > 0.85 ? ["a", t("high", "élevée")] : ["g", t("typical", "typique")]], [t("Konya burden guide", "Banquette guide de Konya"), fmt(kon), "m", Math.abs(v.B / kon - 1) > 0.15 ? ["a", pct(v.B / kon - 1) + t(" vs design", " / plan")] : ["g", "ok"]], [t("Stiffness H/B", "Raideur H/B"), fmt(v.H / v.B, 1), "", v.H / v.B < 2 ? ["r", t("< 2 blocky", "< 2 en blocs")] : v.H / v.B < 3 ? ["a", t("2–3 fair", "2–3 moyen")] : ["g", "≥ 3"]], [t("Stemming T/B", "Bourrage T/B"), fmt(v.T / v.B), "", v.T / v.B < 0.7 ? ["r", t("< 0.7 flyrock risk", "< 0,7 risque de projections")] : ["g", "ok"]], ["X50 Kuz-Ram", fmt(x50, 0), "cm"], [t("MIC", "CUIM"), fmt(mic, 0), "kg"], [t("Predicted PPV", "VPP prévue"), fmt(ppv, 1), "mm/s", ppv > v.lim ? ["r", t("exceeds limit", "dépasse la limite")] : ppv > 0.8 * v.lim ? ["a", t("> 80% of limit", "> 80 % de la limite")] : ["g", "ok"]], [t("Max MIC for limit", "CUIM max. pour la limite"), fmt(qmax, 0), "kg"], [t("Max holes per 8 ms", "Trous max. par 8 ms"), Math.floor(qmax / Q), ""]]; } },
+    water: { title: ["Sump & pump", "Puisard et pompe"], inputs: [["ha", "Catchment (ha)", "Bassin versant (ha)", 20], ["rain", "Design storm (mm)", "Pluie de projet (mm)", 80], ["C", "Runoff coefficient", "Coefficient de ruissellement", 0.8], ["np", "Pumps", "Pompes", 2], ["qp", "Flow per pump (L/s)", "Débit par pompe (L/s)", 75], ["stat", "Static lift (m)", "Hauteur géométrique (m)", 55], ["L", "Discharge line length (m)", "Longueur de refoulement (m)", 1000], ["d", "Pipe internal diameter (mm)", "Diamètre intérieur (mm)", 250], ["chw", "Hazen-Williams C", "C de Hazen-Williams", 150], ["eta", "Pump efficiency", "Rendement de la pompe", 0.65]],
+      calc(v) { const V = v.rain / 1000 * v.ha * 1e4 * v.C, Qt = v.np * v.qp, m3h = Qt * 3.6, tt = V / m3h; const Q = Qt / 1000, d = v.d / 1000; const vel = Q / (Math.PI * d * d / 4); const hf = 10.67 * v.L * Math.pow(Q, 1.852) / (Math.pow(v.chw, 1.852) * Math.pow(d, 4.87)); const H = v.stat + hf; const P = 9.81 * Q * H / v.eta;
+        return [[t("Storm runoff volume", "Volume ruisselé"), fmt(V, 0), "m³"], [t("Pumping capacity", "Capacité de pompage"), fmt(m3h, 0), "m³/h"], [t("Pump-out time", "Temps de pompage"), fmt(tt, 1), "h", tt > 24 ? ["r", "> 24 h"] : tt > 12 ? ["a", "12–24 h"] : ["g", "< 12 h"]], [t("Pipe velocity (single line)", "Vitesse (conduite unique)"), fmt(vel), "m/s", vel > 3 ? ["a", t("high friction", "fortes pertes")] : vel < 1 ? ["a", t("settling risk", "risque de dépôt")] : ["g", "ok"]], [t("Friction loss", "Pertes de charge"), fmt(hf, 1), "m"], [t("Total dynamic head", "Hauteur manométrique totale"), fmt(H, 1), "m"], [t("Shaft power (total)", "Puissance à l'arbre (totale)"), fmt(P, 0), "kW"]]; } },
+    feed: { title: ["Crusher blend", "Mélange concasseur"], inputs: [["s1", "HG share (%)", "Part HT (%)", 60], ["g1", "HG grade (g/t)", "Teneur HT (g/t)", 1.8], ["o1", "HG oxide (%)", "Oxyde HT (%)", 20], ["s2", "MG share (%)", "Part MT (%)", 0], ["g2", "MG grade (g/t)", "Teneur MT (g/t)", 1.2], ["o2", "MG oxide (%)", "Oxyde MT (%)", 40], ["s3", "LG share (%)", "Part BT (%)", 40], ["g3", "LG grade (g/t)", "Teneur BT (g/t)", 0.9], ["o3", "LG oxide (%)", "Oxyde BT (%)", 50], ["olim", "Oxide limit (%)", "Limite d'oxyde (%)", 35], ["tph", "Crusher rate (t/h)", "Débit concasseur (t/h)", 450], ["rec", "Recovery (%)", "Récupération (%)", 92], ["price", "Gold price ($/oz)", "Prix de l'or ($/oz)", 2500]],
       calc(v) { const sum = v.s1 + v.s2 + v.s3 || 1; const g = (v.s1 * v.g1 + v.s2 * v.g2 + v.s3 * v.g3) / sum; const o = (v.s1 * v.o1 + v.s2 * v.o2 + v.s3 * v.o3) / sum; const oz = v.tph * 24 * g * v.rec / 100 / 31.1035; const val = v.tph * g * v.rec / 100 * v.price / 31.1035;
-        return [["Shares sum", fmt(v.s1 + v.s2 + v.s3, 0), "%", Math.abs(v.s1 + v.s2 + v.s3 - 100) > 0.01 ? ["r", "must be 100"] : ["g", "ok"]], ["Blend grade", fmt(g), "g/t"], ["Oxide share", fmt(o, 1), "%", o > v.olim ? ["r", "over limit"] : ["g", "ok"]], ["Recovered gold per day", fmt(oz, 0), "oz"], ["Value of one crusher hour", "$" + fmt(val, 0), ""]]; } },
-    gc: { title: "Cut-off & dilution", inputs: [["price", "Gold price ($/oz)", 2500], ["roy", "Royalty + selling (%)", 5], ["rec", "Recovery (%)", 92], ["cost", "Processing + G&A ($/t)", 25], ["t", "Ore block (t)", 10000], ["g", "Block grade (g/t)", 2], ["loss", "Ore loss (%)", 5], ["dil", "Dilution (% of ore mined)", 10], ["gw", "Dilution grade (g/t)", 0.2]],
+        return [[t("Shares sum", "Somme des parts"), fmt(v.s1 + v.s2 + v.s3, 0), "%", Math.abs(v.s1 + v.s2 + v.s3 - 100) > 0.01 ? ["r", t("must be 100", "doit faire 100")] : ["g", "ok"]], [t("Blend grade", "Teneur du mélange"), fmt(g), "g/t"], [t("Oxide share", "Part d'oxyde"), fmt(o, 1), "%", o > v.olim ? ["r", t("over limit", "hors limite")] : ["g", "ok"]], [t("Recovered gold per day", "Or récupéré par jour"), fmt(oz, 0), "oz"], [t("Value of one crusher hour", "Valeur d'une heure de concasseur"), "$" + fmt(val, 0), ""]]; } },
+    gc: { title: ["Cut-off & dilution", "Teneur de coupure et dilution"], inputs: [["price", "Gold price ($/oz)", "Prix de l'or ($/oz)", 2500], ["roy", "Royalty + selling (%)", "Redevance + frais de vente (%)", 5], ["rec", "Recovery (%)", "Récupération (%)", 92], ["cost", "Processing + G&A ($/t)", "Traitement + frais généraux ($/t)", 25], ["t", "Ore block (t)", "Bloc de minerai (t)", 10000], ["g", "Block grade (g/t)", "Teneur du bloc (g/t)", 2], ["loss", "Ore loss (%)", "Perte de minerai (%)", 5], ["dil", "Dilution (% of ore mined)", "Dilution (% du minerai extrait)", 10], ["gw", "Dilution grade (g/t)", "Teneur de la dilution (g/t)", 0.2]],
       calc(v) { const npg = v.price * (1 - v.roy / 100) / 31.1035 * v.rec / 100; const cog = v.cost / npg; const to = v.t * (1 - v.loss / 100), tw = to * v.dil / 100, T = to + tw; const gd = (to * v.g + tw * v.gw) / T; const ozs = v.t * v.g / 31.1035, ozd = T * gd / 31.1035;
-        return [["Net value per in-situ gram", "$" + fmt(npg), "/g"], ["Breakeven cut-off", fmt(cog), "g/t"], ["Tonnes to plant", fmt(T, 0), "t"], ["Delivered grade", fmt(gd), "g/t", gd < v.g * 0.92 ? ["a", Math.round((gd / v.g - 1) * 100) + "% grade"] : ["g", Math.round((gd / v.g - 1) * 100) + "% grade"]], ["Ounces in situ → delivered", fmt(ozs, 0) + " → " + fmt(ozd, 0), "oz", ["a", Math.round((ozd / ozs - 1) * 100) + "% oz"]], ["Block margin (delivered)", "$" + fmt(T * (gd * npg - v.cost), 0), ""]]; } },
-    evm: { title: "Earned value control", inputs: [["bac", "BAC ($M)", 9.6], ["pv", "Planned value PV ($M)", 4.4], ["ev", "Earned value EV ($M)", 4.0], ["ac", "Actual cost AC ($M)", 4.3]],
-      calc(v) { const cpi = v.ev / v.ac, spi = v.ev / v.pv, eac = v.bac / cpi, tcpi = (v.bac - v.ev) / (v.bac - v.ac);
-        return [["CPI = EV/AC", fmt(cpi), "", cpi < 0.9 ? ["r", "cost-recovery review"] : cpi < 0.95 ? ["a", "escalate"] : ["g", "on track"]], ["SPI = EV/PV", fmt(spi), "", spi < 0.9 ? ["r", "re-baseline if 2 weeks"] : spi < 0.95 ? ["a", "watch"] : ["g", "on track"]], ["Cost variance CV", fmt(v.ev - v.ac), "$M"], ["Schedule variance SV", fmt(v.ev - v.pv), "$M"], ["EAC = BAC/CPI", fmt(eac), "$M"], ["VAC = BAC − EAC", fmt(v.bac - eac), "$M"], ["TCPI", fmt(tcpi), "", tcpi > 1.1 ? ["r", "not credible without change"] : tcpi > 1 ? ["a", "stretch"] : ["g", "achievable"]]]; } }
+        return [[t("Net value per in-situ gram", "Valeur nette par gramme en place"), "$" + fmt(npg), "/g"], [t("Breakeven cut-off", "Teneur de coupure d'équilibre"), fmt(cog), "g/t"], [t("Tonnes to plant", "Tonnes vers l'usine"), fmt(T, 0), "t"], [t("Delivered grade", "Teneur livrée"), fmt(gd), "g/t", gd < v.g * 0.92 ? ["a", pct(gd / v.g - 1) + t(" grade", " teneur")] : ["g", pct(gd / v.g - 1) + t(" grade", " teneur")]], [t("Ounces in situ → delivered", "Onces en place → livrées"), fmt(ozs, 0) + " → " + fmt(ozd, 0), "oz", ["a", pct(ozd / ozs - 1) + " oz"]], [t("Block margin (delivered)", "Marge du bloc (livré)"), "$" + fmt(T * (gd * npg - v.cost), 0), ""]]; } },
+    evm: { title: ["Earned value control", "Maîtrise par la valeur acquise"], inputs: [["bac", "BAC ($M)", "BAC (M$)", 9.6], ["pv", "Planned value PV ($M)", "Valeur planifiée PV (M$)", 4.4], ["ev", "Earned value EV ($M)", "Valeur acquise EV (M$)", 4.0], ["ac", "Actual cost AC ($M)", "Coût réel AC (M$)", 4.3]],
+      calc(v) { const cpi = v.ev / v.ac, spi = v.ev / v.pv, eac = v.bac / cpi, tcpi = (v.bac - v.ev) / (v.bac - v.ac); const M = t("$M", "M$");
+        return [["CPI = EV/AC", fmt(cpi), "", cpi < 0.9 ? ["r", t("cost-recovery review", "revue de récupération")] : cpi < 0.95 ? ["a", t("escalate", "escalader")] : ["g", t("on track", "conforme")]], ["SPI = EV/PV", fmt(spi), "", spi < 0.9 ? ["r", t("re-baseline if 2 weeks", "nouvelle référence si 2 semaines")] : spi < 0.95 ? ["a", t("watch", "surveiller")] : ["g", t("on track", "conforme")]], [t("Cost variance CV", "Écart de coût CV"), fmt(v.ev - v.ac), M], [t("Schedule variance SV", "Écart de délai SV"), fmt(v.ev - v.pv), M], ["EAC = BAC/CPI", fmt(eac), M], ["VAC = BAC − EAC", fmt(v.bac - eac), M], ["TCPI", fmt(tcpi), "", tcpi > 1.1 ? ["r", t("not credible without change", "irréaliste sans changement")] : tcpi > 1 ? ["a", t("stretch", "tendu")] : ["g", t("achievable", "atteignable")]]]; } }
   };
 
   function renderTool(p, id) {
-    const t = TOOLS[id]; const box = document.createElement("div");
-    box.innerHTML = `<div class="eyebrow" style="margin-bottom:6px">Field tool</div><h3 style="margin-bottom:12px">${t.title}</h3>
-      <div class="calc"><div class="fields">${t.inputs.map(([k, l, d]) => `<label for="t-${id}-${k}">${l}<input id="t-${id}-${k}" type="number" step="any" value="${d}"></label>`).join("")}</div><div class="out" id="o-${id}"></div></div>
-      <p style="font-size:.8rem;color:var(--muted);margin-top:10px">Defaults reproduce the module exercise. Replace them with your site data.</p>`;
-    if (p.id === "panel" && !p.dataset.keep) p.innerHTML = "";
+    const T = TOOLS[id]; const box = document.createElement("div");
+    box.innerHTML = `<div class="eyebrow" style="margin-bottom:6px">${t("Field tool", "Outil terrain")}</div><h3 style="margin-bottom:12px">${t(T.title[0], T.title[1])}</h3>
+      <div class="calc"><div class="fields">${T.inputs.map(([k, en, fr, d]) => `<label for="t-${id}-${k}">${t(en, fr)}<input id="t-${id}-${k}" type="number" step="any" value="${d}"></label>`).join("")}</div><div class="out" id="o-${id}"></div></div>
+      <p style="font-size:.8rem;color:var(--muted);margin-top:10px">${t("Defaults reproduce the module exercise. Replace them with your site data.", "Les valeurs par défaut reproduisent l'exercice du module. Remplacez-les par les données de votre site.")}</p>`;
     p.appendChild(box);
-    const run = () => { const v = {}; t.inputs.forEach(([k]) => v[k] = parseFloat($("#t-" + id + "-" + k, box).value) || 0);
-      $("#o-" + id, box).innerHTML = t.calc(v).map(r => { const fl = Array.isArray(r[r.length - 1]) ? r[r.length - 1] : null; const unit = typeof r[2] === "string" ? r[2] : ""; return `<div><span>${r[0]}</span><b>${r[1]} ${unit}${fl ? `<span class="flag ${fl[0]}">${fl[1]}</span>` : ""}</b></div>`; }).join(""); };
+    const run = () => { const v = {}; T.inputs.forEach(([k]) => v[k] = parseFloat($("#t-" + id + "-" + k, box).value) || 0);
+      $("#o-" + id, box).innerHTML = T.calc(v).map(r => { const fl = Array.isArray(r[3]) ? r[3] : null; return `<div><span>${r[0]}</span><b>${r[1]} ${r[2] || ""}${fl ? `<span class="flag ${fl[0]}">${fl[1]}</span>` : ""}</b></div>`; }).join(""); };
     box.querySelectorAll("input").forEach(i => i.addEventListener("input", run)); run();
   }
 
   /* ---------------- blast timing simulator ---------------- */
   function renderSim(p) {
     const box = document.createElement("div"); box.className = "sim";
-    box.innerHTML = `<div class="eyebrow" style="margin-bottom:6px">Timing simulator</div><h3 style="margin-bottom:8px">Firing sequence, 8 ms windows and vibration</h3>
-      <p style="font-size:.9rem;color:var(--muted)">Each hole fires at its surface delay plus a 500 ms in-hole delay. Pyrotechnic scatter is applied to that total, which is why long in-hole delays can make neighbouring holes fire inside the same 8 ms window.</p>
+    box.innerHTML = `<div class="eyebrow" style="margin-bottom:6px">${t("Timing simulator", "Simulateur de séquence")}</div><h3 style="margin-bottom:8px">${t("Firing sequence, 8 ms windows and vibration", "Séquence de tir, fenêtres de 8 ms et vibrations")}</h3>
+      <p style="font-size:.9rem;color:var(--muted)">${t("Each hole fires at its surface delay plus a 500 ms in-hole delay. Pyrotechnic scatter is applied to that total, which is why long in-hole delays can make neighbouring holes fire inside the same 8 ms window.", "Chaque trou part à son retard de surface plus un retard de fond de 500 ms. La dispersion pyrotechnique s'applique à ce total : c'est pourquoi de longs retards de fond peuvent faire partir des trous voisins dans la même fenêtre de 8 ms.")}</p>
       <div class="simgrid"><div class="fields">
-        <label>Rows<input id="sm-rows" type="number" value="4" min="1" max="8"></label><label>Holes per row<input id="sm-cols" type="number" value="10" min="2" max="16"></label>
-        <label>Hole-to-hole (ms)<input id="sm-h" type="number" value="17"></label><label>Row-to-row (ms)<input id="sm-r" type="number" value="42"></label>
-        <label>Tie-up<select id="sm-mode"><option value="v">V (chevron) from centre</option><option value="row">Row by row from one end</option></select></label>
-        <label>Scatter (% of total delay)<select id="sm-sc"><option value="0">0 · electronic</option><option value="1">±1%</option><option value="3" selected>±3% · pyrotechnic</option><option value="5">±5%</option></select></label>
-        <label>Burden (m)<input id="sm-b" type="number" value="3.5" step="0.1"></label><label>Charge per hole (kg)<input id="sm-q" type="number" value="75.1" step="0.1"></label>
-        <label>Distance to receiver (m)<input id="sm-d" type="number" value="600"></label><label>PPV limit (mm/s)<input id="sm-l" type="number" value="10"></label>
-        <div class="row" style="grid-column:1/-1;margin-top:4px"><button class="btn" id="sm-play" type="button">Fire</button><button class="ghost" id="sm-roll" type="button">New scatter draw</button></div>
+        <label>${t("Rows", "Rangées")}<input id="sm-rows" type="number" value="4" min="1" max="8"></label><label>${t("Holes per row", "Trous par rangée")}<input id="sm-cols" type="number" value="10" min="2" max="16"></label>
+        <label>${t("Hole-to-hole (ms)", "Trou à trou (ms)")}<input id="sm-h" type="number" value="17"></label><label>${t("Row-to-row (ms)", "Rangée à rangée (ms)")}<input id="sm-r" type="number" value="42"></label>
+        <label>${t("Tie-up", "Raccordement")}<select id="sm-mode"><option value="v">${t("V (chevron) from centre", "En V depuis le centre")}</option><option value="row">${t("Row by row from one end", "Rangée par rangée depuis une extrémité")}</option></select></label>
+        <label>${t("Scatter (% of total delay)", "Dispersion (% du retard total)")}<select id="sm-sc"><option value="0">0 · ${t("electronic", "électronique")}</option><option value="1">±1%</option><option value="3" selected>±3% · ${t("pyrotechnic", "pyrotechnique")}</option><option value="5">±5%</option></select></label>
+        <label>${t("Burden (m)", "Banquette (m)")}<input id="sm-b" type="number" value="3.5" step="0.1"></label><label>${t("Charge per hole (kg)", "Charge par trou (kg)")}<input id="sm-q" type="number" value="75.1" step="0.1"></label>
+        <label>${t("Distance to receiver (m)", "Distance au récepteur (m)")}<input id="sm-d" type="number" value="600"></label><label>${t("PPV limit (mm/s)", "Limite VPP (mm/s)")}<input id="sm-l" type="number" value="10"></label>
+        <div class="row" style="grid-column:1/-1;margin-top:4px"><button class="btn" id="sm-play" type="button">${t("Fire", "Mise à feu")}</button><button class="ghost" id="sm-roll" type="button">${t("New scatter draw", "Nouveau tirage de dispersion")}</button></div>
       </div><div style="display:grid;gap:10px;min-width:0"><div class="plan" id="sm-plan"></div><div class="out" id="sm-out"></div></div></div>`;
     p.appendChild(box);
     let seed = 7, raf = null;
@@ -451,34 +483,34 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
       const s0 = seed; const holes = [];
       for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
         const surf = mode === "v" ? Math.round(Math.abs(j + (i % 2 ? 0.5 : 0) - mid) * h + i * r) : j * h + i * r;
-        const tot = surf + 500; const t = tot * (1 + (rnd() * 2 - 1) * sc);
-        holes.push({ i, j, surf, t: t - 500 });
+        const tt = (surf + 500) * (1 + (rnd() * 2 - 1) * sc);
+        holes.push({ i, j, surf, t: tt - 500 });
       }
       seed = s0;
-      const ts = holes.map(x => x.t).sort((a, b) => a - b); let mx = 0, at = 0;
-      for (let a = 0, b = 0; a < ts.length; a++) { while (b < ts.length && ts[b] < ts[a] + 8) b++; if (b - a > mx) { mx = b - a; at = ts[a]; } }
-      return { R, C, holes, mx, at, span: ts[ts.length - 1] - ts[0], h, r };
+      const ts = holes.map(x => x.t).sort((a, b) => a - b); let mx = 0;
+      for (let a = 0, b = 0; a < ts.length; a++) { while (b < ts.length && ts[b] < ts[a] + 8) b++; if (b - a > mx) mx = b - a; }
+      return { R, C, holes, mx, span: ts[ts.length - 1] - ts[0], h, r };
     }
     function draw(tNow) {
       const m = model(); const W = 40 + m.C * 34 + 20, Hh = 30 + m.R * 34 + 90;
       const bins = {}; m.holes.forEach(x => { const k = Math.floor(x.t / 8); bins[k] = (bins[k] || 0) + 1; });
       const keys = Object.keys(bins).map(Number); const kmin = Math.min(...keys), kmax = Math.max(...keys); const bw = (W - 60) / (kmax - kmin + 1);
       const limQ = Math.pow(g("sm-d") / Math.pow(1140 / g("sm-l"), 1 / 1.6), 2), limN = limQ / (g("sm-q") || 1);
-      let s = `<svg viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blast pattern firing times">`;
-      s += `<line x1="20" y1="${30 + m.R * 34 - 8}" x2="${W - 10}" y2="${30 + m.R * 34 - 8}" stroke="var(--ink)" stroke-width="2"/><text x="20" y="${30 + m.R * 34 + 4}">FREE FACE</text>`;
-      m.holes.forEach(x => { const cx = 40 + x.j * 34 + (x.i % 2 ? 17 : 0), cy = 30 + (m.R - 1 - x.i) * 34; const st2 = tNow == null ? "" : tNow >= x.t + 40 ? "d" : tNow >= x.t ? "f" : ""; s += `<circle class="h ${st2}" cx="${cx}" cy="${cy}" r="8"/><text x="${cx}" y="${cy + 18}" text-anchor="middle">${Math.round(x.t)}</text>`; });
-      const by = Hh - 14; s += `<line class="axis" x1="40" y1="${by}" x2="${W - 20}" y2="${by}"/><text x="40" y="${Hh - 2}">holes per 8 ms bin · red = above vibration limit</text>`;
+      let s = `<svg viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${t("Blast pattern firing times", "Temps de mise à feu de la maille")}">`;
+      s += `<line x1="20" y1="${30 + m.R * 34 - 8}" x2="${W - 10}" y2="${30 + m.R * 34 - 8}" stroke="var(--ink)" stroke-width="2"/><text x="20" y="${30 + m.R * 34 + 4}">${t("FREE FACE", "FACE LIBRE")}</text>`;
+      m.holes.forEach(x => { const cx = 40 + x.j * 34 + (x.i % 2 ? 17 : 0), cy = 30 + (m.R - 1 - x.i) * 34; const c2 = tNow == null ? "" : tNow >= x.t + 40 ? "d" : tNow >= x.t ? "f" : ""; s += `<circle class="h ${c2}" cx="${cx}" cy="${cy}" r="8"/><text x="${cx}" y="${cy + 18}" text-anchor="middle">${Math.round(x.t)}</text>`; });
+      const by = Hh - 14; s += `<line class="axis" x1="40" y1="${by}" x2="${W - 20}" y2="${by}"/><text x="40" y="${Hh - 2}">${t("holes per 8 ms bin · red = above vibration limit", "trous par tranche de 8 ms · rouge = au-dessus de la limite")}</text>`;
       const maxb = Math.max(...Object.values(bins), limN);
       keys.forEach(k => { const n = bins[k], hgt = n / maxb * 52; s += `<rect class="bar ${n > limN ? "over" : ""}" x="${40 + (k - kmin) * bw}" y="${by - hgt}" width="${Math.max(1, bw - 1)}" height="${hgt}"/>`; });
       if (tNow != null) { const x = 40 + (tNow / 8 - kmin) * bw; if (x <= W - 20) s += `<line x1="${x}" y1="${by - 56}" x2="${x}" y2="${by}" stroke="var(--bad)" stroke-width="1.5"/>`; }
       $("#sm-plan", box).innerHTML = s + "</svg>";
       const Q = g("sm-q"), mic = m.mx * Q, ppv = 1140 * Math.pow(g("sm-d") / Math.sqrt(mic), -1.6); const rpm = m.r / (g("sm-b") || 1);
-      $("#sm-out", box).innerHTML = [["Max holes in any 8 ms window", m.mx, m.mx > limN ? ["r", "> " + Math.floor(limN) + " allowed"] : ["g", "≤ " + Math.floor(limN)]], ["Maximum instantaneous charge", fmt(mic, 0) + " kg", null], ["Predicted PPV (k 1140, β 1.6)", fmt(ppv, 1) + " mm/s", ppv > g("sm-l") ? ["r", "exceeds"] : ["g", "ok"]], ["Row delay per metre of burden", fmt(rpm, 1) + " ms/m", rpm < 6.5 ? ["r", "< 6.5: violent, backbreak"] : rpm > 13 ? ["a", "> 13: scattered pile"] : ["g", "6.5–13"]], ["Hole-to-hole vs 8 ms", m.h < 8 ? "overlap by design" : "separated", m.h < 8 ? ["r", "< 8 ms"] : ["g", "≥ 8 ms"]], ["Blast duration", fmt(m.span, 0) + " ms", null]].map(r => `<div><span>${r[0]}</span><b>${r[1]}${r[2] ? `<span class="flag ${r[2][0]}">${r[2][1]}</span>` : ""}</b></div>`).join("");
+      $("#sm-out", box).innerHTML = [[t("Max holes in any 8 ms window", "Trous max. dans une fenêtre de 8 ms"), m.mx, m.mx > limN ? ["r", "> " + Math.floor(limN) + t(" allowed", " autorisés")] : ["g", "≤ " + Math.floor(limN)]], [t("Maximum instantaneous charge", "Charge unitaire instantanée max."), fmt(mic, 0) + " kg", null], [t("Predicted PPV (k 1140, β 1.6)", "VPP prévue (k 1140, β 1,6)"), fmt(ppv, 1) + " mm/s", ppv > g("sm-l") ? ["r", t("exceeds", "dépasse")] : ["g", "ok"]], [t("Row delay per metre of burden", "Retard de rangée par mètre de banquette"), fmt(rpm, 1) + " ms/m", rpm < 6.5 ? ["r", t("< 6.5: violent, backbreak", "< 6,5 : violent, arrière-bris")] : rpm > 13 ? ["a", t("> 13: scattered pile", "> 13 : tas étalé")] : ["g", "6,5–13"]], [t("Hole-to-hole vs 8 ms", "Trou à trou / 8 ms"), m.h < 8 ? t("overlap by design", "recouvrement prévu") : t("separated", "séparés"), m.h < 8 ? ["r", "< 8 ms"] : ["g", "≥ 8 ms"]], [t("Blast duration", "Durée du tir"), fmt(m.span, 0) + " ms", null]].map(r => `<div><span>${r[0]}</span><b>${r[1]}${r[2] ? `<span class="flag ${r[2][0]}">${r[2][1]}</span>` : ""}</b></div>`).join("");
       return m;
     }
     box.querySelectorAll("input,select").forEach(i => i.addEventListener("input", () => { cancelAnimationFrame(raf); draw(); }));
     $("#sm-roll", box).onclick = () => { seed = (seed * 48271) % 2147483647 || 11; cancelAnimationFrame(raf); draw(); };
-    $("#sm-play", box).onclick = () => { cancelAnimationFrame(raf); const m = draw(); const t0 = performance.now(), end = m.span + 80; const step = now => { const t = (now - t0) / (reduce ? 1 : 12); draw(Math.min(t, end)); if (t < end) raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); };
+    $("#sm-play", box).onclick = () => { cancelAnimationFrame(raf); const m = draw(); const t0 = performance.now(), end = m.span + 80; const step = now => { const tt = (now - t0) / (reduce ? 1 : 12); draw(Math.min(tt, end)); if (tt < end) raf = requestAnimationFrame(step); }; raf = requestAnimationFrame(step); };
     draw();
   }
 
@@ -487,44 +519,46 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
     const c = cyc(cid), qs = A.exams[cid];
     if (!examUnlocked(cid)) { go(cid); return; }
     $("#app").innerHTML = `<section class="wrap block">
-      <div class="mod-head"><button class="ghost" id="back" type="button">← Cycle ${c.n} · ${esc(c.name)}</button></div>
-      <div class="eyebrow">End-of-cycle exam · pass mark ${A.passMark * 100}%</div><h2 style="margin:6px 0 16px">Cycle ${c.n} · ${esc(c.name)}</h2>
+      <div class="mod-head"><button class="ghost" id="back" type="button">← ${t("Cycle", "Cycle")} ${c.n} · ${esc(c.name)}</button></div>
+      <div class="eyebrow">${t("End-of-cycle exam · pass mark", "Examen de fin de cycle · seuil")} ${pct(A.passMark)}</div><h2 style="margin:6px 0 16px">${t("Cycle", "Cycle")} ${c.n} · ${esc(c.name)}</h2>
       <div id="res"></div>
       <form id="exam">${qs.map((q, i) => `<fieldset class="q" id="q${i}" style="margin-inline:0"><legend class="qt">${i + 1}. ${esc(q.q)}</legend>${q.o.map((o, j) => `<label><input type="radio" name="q${i}" value="${j}"> <span>${esc(o)}</span></label>`).join("")}<div class="why" hidden></div></fieldset>`).join("")}
-      <div class="row"><button class="btn dark" type="submit">Submit answers</button><span style="font-size:.85rem;color:var(--muted)">Unanswered questions count as wrong.</span></div></form></section>`;
+      <div class="row"><button class="btn dark" type="submit">${t("Submit answers", "Valider les réponses")}</button><span style="font-size:.85rem;color:var(--muted)">${t("Unanswered questions count as wrong.", "Les questions sans réponse comptent comme fausses.")}</span></div></form></section>`;
     $("#back").onclick = () => go(cid);
     $("#exam").addEventListener("submit", e => {
       e.preventDefault(); let ok = 0;
-      qs.forEach((q, i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); const right = sel && +sel.value === q.a; if (right) ok++; const f = $("#q" + i); f.className = "q " + (right ? "right" : "wrong"); const w = f.querySelector(".why"); w.hidden = false; w.innerHTML = `<b>${right ? "Correct" : "Answer: " + esc(q.o[q.a])}.</b> ${esc(q.why)}`; });
+      qs.forEach((q, i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); const right = sel && +sel.value === q.a; if (right) ok++; const f = $("#q" + i); f.className = "q " + (right ? "right" : "wrong"); const w = f.querySelector(".why"); w.hidden = false; w.innerHTML = `<b>${right ? t("Correct", "Juste") : t("Answer: ", "Réponse : ") + esc(q.o[q.a])}.</b> ${esc(q.why)}`; });
       const sc = ok / qs.length, pass = sc >= A.passMark; const prev = st.exams[cid] || {};
       st.exams[cid] = { best: Math.max(sc, prev.best || 0), passed: prev.passed || pass, date: pass ? new Date().toISOString().slice(0, 10) : prev.date }; save(); chips();
       const nextC = A.cycles[c.n];
-      $("#res").innerHTML = `<div class="score"><span class="big">${Math.round(sc * 100)}%</span><div><b>${ok}/${qs.length} correct · ${pass ? "Pass" : "Not yet: 80% needed"}</b><br><span style="font-size:.9rem;color:var(--muted)">${pass ? (nextC ? "Cycle " + nextC.n + " (" + esc(nextC.name) + ") exam is now unlocked." : "Programme complete.") : "Review the explanations below, revisit the modules, then retake."}</span></div></div>${pass ? certificate(c, sc) : ""}`;
-      const nm = $("#certname"); if (nm) nm.addEventListener("input", () => { st.name = nm.value; save(); $("#certwho").textContent = nm.value || "Your name"; });
+      $("#res").innerHTML = `<div class="score"><span class="big">${pct(sc)}</span><div><b>${ok}/${qs.length} ${t("correct", "justes")} · ${pass ? t("Pass", "Réussi") : t("Not yet: 80% needed", "Pas encore : 80 % requis")}</b><br><span style="font-size:.9rem;color:var(--muted)">${pass ? (nextC ? t("Cycle " + nextC.n + " (" + esc(nextC.name) + ") exam is now unlocked.", "L'examen du cycle " + nextC.n + " (" + esc(nextC.name) + ") est débloqué.") : t("Programme complete.", "Programme terminé.")) : t("Review the explanations below, revisit the modules, then retake.", "Relisez les explications ci-dessous, revoyez les modules, puis repassez l'examen.")}</span></div></div>${pass ? certificate(c, sc) : ""}`;
+      const nm = $("#certname"); if (nm) nm.addEventListener("input", () => { st.name = nm.value; save(); $("#certwho").textContent = nm.value || t("Your name", "Votre nom"); });
       window.scrollTo(0, 0);
     });
     window.scrollTo(0, 0);
   }
   function certificate(c, sc) {
-    return `<div class="cert"><div class="eyebrow">Bench to Boardroom · certificate of completion</div><div class="who" id="certwho">${esc(st.name || "Your name")}</div><div>has passed <b>Cycle ${c.n} · ${esc(c.name)}</b> with a score of <b>${Math.round(sc * 100)}%</b> on ${new Date().toISOString().slice(0, 10)}.</div><div style="font-size:.85rem;color:var(--muted)">Load & Haul · Drilling · Blasting · Dewatering · Crusher Feed · Grade Control</div><label style="display:grid;gap:4px;font-size:.8rem;color:var(--muted);width:min(320px,100%)">Name on certificate<input type="text" id="certname" value="${esc(st.name)}"></label><div style="font-size:.8rem;color:var(--muted)">Take a screenshot for the training file. Field sign-off by a supervisor is still required.</div></div>`;
+    const acts = A.activities.map(a => a.name).join(" · ");
+    return `<div class="cert"><div class="eyebrow">Bench to Boardroom · ${t("certificate of completion", "attestation de réussite")}</div><div class="who" id="certwho">${esc(st.name || t("Your name", "Votre nom"))}</div><div>${t("has passed", "a réussi")} <b>${t("Cycle", "le cycle")} ${c.n} · ${esc(c.name)}</b> ${t("with a score of", "avec un score de")} <b>${pct(sc)}</b> ${t("on", "le")} ${new Date().toISOString().slice(0, 10)}.</div><div style="font-size:.85rem;color:var(--muted)">${esc(acts)}</div><label style="display:grid;gap:4px;font-size:.8rem;color:var(--muted);width:min(320px,100%)">${t("Name on certificate", "Nom sur l'attestation")}<input type="text" id="certname" value="${esc(st.name)}"></label><div style="font-size:.8rem;color:var(--muted)">${t("Take a screenshot for the training file. Field sign-off by a supervisor is still required.", "Faites une capture d'écran pour le dossier de formation. La validation sur le terrain par un superviseur reste obligatoire.")}</div></div>`;
   }
 
   /* ---------------- router ---------------- */
   function go(h) { if (location.hash.slice(1) !== h) location.hash = h; else route(); }
   function route() {
-    const h = location.hash.slice(1); chips();
+    const h = location.hash.slice(1); chrome(); chips();
     const cy = A.cycles.map(c => c.id);
-    if (h.startsWith("exam-") && cy.includes(h.slice(5))) { st.cycle = h.slice(5); save(); return exam(h.slice(5)); }
+    if (h.startsWith("exam-") && cy.includes(h.slice(5))) { st.cycle = h.slice(5); save(); chips(); return exam(h.slice(5)); }
     const [c, a] = h.split("-");
     if (cy.includes(c) && a && A.modules[c][a]) { st.cycle = c; save(); chips(); return module(c, a); }
     if (cy.includes(c)) { st.cycle = c; save(); chips(); }
     home();
   }
   window.addEventListener("hashchange", route);
+  document.querySelectorAll(".lang button").forEach(b => b.onclick = () => { if (st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; A = window.academyFor(st.lang); save(); route(); });
   $("#instructor").checked = !!st.instructor;
   $("#instructor").onchange = e => { st.instructor = e.target.checked; save(); route(); };
   const rs = $("#reset"); let armed = false;
-  rs.onclick = () => { if (!armed) { armed = true; rs.textContent = "Click again to erase progress"; setTimeout(() => { armed = false; rs.textContent = "Reset progress"; }, 4000); return; } st = { mods: {}, exams: {}, name: "", instructor: false, cycle: "engineer" }; save(); armed = false; rs.textContent = "Reset progress"; $("#instructor").checked = false; go("home"); };
+  rs.onclick = () => { if (!armed) { armed = true; rs.textContent = t("Click again to erase progress", "Cliquez encore pour tout effacer"); setTimeout(() => { armed = false; rs.textContent = t("Reset progress", "Réinitialiser"); }, 4000); return; } const lang = st.lang; st = { mods: {}, exams: {}, name: "", instructor: false, cycle: "engineer", lang }; save(); armed = false; $("#instructor").checked = false; go("home"); };
   route();
 })();
 </script>

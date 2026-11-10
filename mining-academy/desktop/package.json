@@ -1,0 +1,18 @@
+{
+  "name": "bench-to-boardroom",
+  "productName": "Bench to Boardroom",
+  "version": "1.1.0",
+  "description": "Open-pit operations academy: Engineer to Project Manager training tool (EN/FR), offline desktop edition.",
+  "main": "main.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node prepare.js && electron .",
+    "build:win": "node build.js win32",
+    "build:linux": "node build.js linux"
+  },
+  "devDependencies": {
+    "@electron/packager": "18.4.4",
+    "electron": "33.4.11"
+  }
+}

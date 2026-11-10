@@ -1,0 +1,65 @@
+name: Bench to Boardroom (desktop)
+
+on:
+  push:
+    paths:
+      - "mining-academy/**"
+      - ".github/workflows/academy-desktop.yml"
+    tags:
+      - "academy-v*"
+  pull_request:
+    paths:
+      - "mining-academy/**"
+      - ".github/workflows/academy-desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mining-academy/desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mining-academy/desktop/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Package Windows x64
+        run: npm run build:win
+
+      - name: Check bundle
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/BenchToBoardroom-win32-x64/BenchToBoardroom.exe)) { throw "exe missing" }
+          if (-not (Test-Path dist/BenchToBoardroom-win32-x64/resources/Bench-to-Boardroom-Handbook.pdf)) { throw "pdf missing" }
+          npx --yes @electron/asar@3.2.17 list dist/BenchToBoardroom-win32-x64/resources/app.asar | Select-String "web/fonts/fonts.css" | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "fonts missing from app.asar" }
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist/BenchToBoardroom-win32-x64 -DestinationPath dist/BenchToBoardroom-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BenchToBoardroom-win-x64
+          path: mining-academy/desktop/dist/BenchToBoardroom-win-x64.zip
+          retention-days: 30
+
+      - name: Attach to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/academy-v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" dist/BenchToBoardroom-win-x64.zip --title "Bench to Boardroom ${{ github.ref_name }}" --notes "Offline Windows desktop edition (EN/FR). Unzip and run BenchToBoardroom.exe." 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release upload "${{ github.ref_name }}" dist/BenchToBoardroom-win-x64.zip --clobber }
