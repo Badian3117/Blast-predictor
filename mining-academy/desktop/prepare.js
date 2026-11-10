@@ -3,7 +3,7 @@ const fs = require("fs"), path = require("path");
 const src = path.join(__dirname, ".."), out = path.join(__dirname, "web");
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, "fonts"), { recursive: true });
-const files = ["index.html", "handbook.html", "content.js", "fr-1.js", "fr-2.js", "fr-3.js", "i18n.js", "illustrations.js"];
+const files = ["index.html", "handbook.html", "content.js", "fr-1.js", "fr-2.js", "fr-3.js", "i18n.js", "illustrations.js", "vibration-db.js"];
 for (const f of files) {
   let s = fs.readFileSync(path.join(src, f), "utf8");
   if (f.endsWith(".html")) {

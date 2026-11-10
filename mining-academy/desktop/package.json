@@ -1,7 +1,7 @@
 {
   "name": "bench-to-boardroom",
   "productName": "Bench to Boardroom",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Open-pit operations academy: Engineer to Project Manager training tool (EN/FR), offline desktop edition.",
   "main": "main.js",
   "private": true,

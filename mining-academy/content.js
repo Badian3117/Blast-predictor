@@ -614,7 +614,12 @@
     { claim: "42 ms between rows is an ISEE minimum.", fix: "ISEE does not set a fixed row delay. Konya's guide is 6.5–13 ms per metre of burden (2–4 ms/ft); 42 ms suits a 3.5 m burden but must scale with burden and be validated by muckpile and vibration results." },
     { claim: "Airblast methodology follows USBM RI 8507.", fix: "RI 8507 (Siskind et al., 1980) covers ground vibration. Airblast is RI 8485 (Siskind et al., 1980). Both are USBM 1980 and often cited together." },
     { claim: "Powder factor is the main design parameter.", fix: "Powder factor is an outcome of geometry and charge. Design burden, spacing, stemming and timing; check powder factor as a sanity range." },
-    { claim: "Availability is availability.", fix: "Physical availability, mechanical availability and use of availability differ. Write the contractual definition down before arguing about the number." }
+    { claim: "Availability is availability.", fix: "Physical availability, mechanical availability and use of availability differ. Write the contractual definition down before arguing about the number." },
+    { claim: "The seismograph shows 0.1; that is 0.1 mm/s.", fix: "Many seismographs print cm/s. 0.1 cm/s is 1 mm/s. Always copy the unit from the printout; a unit slip understates vibration ten times." },
+    { claim: "Report the average of the three axes as the vibration level.", fix: "No standard averages the axes. Report the peak of the largest axis (US, UK, German and Chinese practice) or the peak vector sum (Australian practice), as the governing standard requires. Averaging typically understates the peak by a quarter or more, even before any unit error." },
+    { claim: "Airblast was 82 dB(A), well under the 120 dB limit.", fix: "Airblast limits are in dB(L), linear peak. dB(A) filters out the low frequencies that load buildings. Convert the measured overpressure: dBL = 20·log10(P / 20 µPa); 32 Pa is 124 dBL, above the 120 dBL maximum." },
+    { claim: "10 mm/s and 120 dBL are our targets.", fix: "Under AS 2187.2 / ANZECC they are maximums never to be exceeded. The routine limits are 5 mm/s and 115 dBL for 95% of blasts. A blast at 121 dBL is an exceedance, not a pass." },
+    { claim: "We monitor every blast, so we can build our site law.", fix: "Only if every record carries the blast centre, the monitor position (hence distance) and the charge per 8 ms delay. Recording only the monitor's coordinates gives PPV values that cannot be regressed." }
   ];
 
   A.glossary = [

@@ -7,10 +7,11 @@ across six open-pit activities: load & haul, drilling, blasting, dewatering, cru
 |---|---|
 | `index.html` | Interactive tool (English / French switch in the top bar): animated pit section, 18 modules (course, field tips, graded exercise, field calculator), blast timing simulator, three 15-question exams (pass 80%), certificates. Progress is stored in the browser. |
 | `handbook.html` | The same content as a bilingual A4 handbook: English, with the French translation in smaller italics under each block. |
-| `Bench-to-Boardroom-Handbook.pdf` | Pre-rendered 101-page bilingual handbook with worked solutions, exam keys, formula sheet, EN–FR glossary. |
+| `Bench-to-Boardroom-Handbook.pdf` | Pre-rendered 111-page bilingual handbook with worked solutions, exam keys, formula sheet, EN–FR glossary, vibration and airblast database (Appendix G). |
 | `content.js` | Single source of truth for all courses, exercises, exams, glossary and references. Edit here; both views update. |
 | `fr-1.js`, `fr-2.js`, `fr-3.js`, `i18n.js` | French translation (same structure as `content.js`) and the merge layer. |
 | `desktop/` | Offline desktop edition (Electron): `BenchToBoardroom.exe` for Windows. See `desktop/README.md`. |
+| `vibration-db.js` | Vibration and airblast database: published attenuation laws (k, β by rock type and source), vibration and airblast limits by standard (AS 2187.2/ANZECC, USBM RI 8507/OSM, 30 CFR 816.67, DIN 4150-3, BS 7385-2, GB 6722-2014, DGMS), each with sources and a verification status; plus prediction, compliance and regression functions. Used by the tool's **Vibration & airblast lab** and the handbook's Appendix G. |
 | `illustrations.js` | SVG scene library (section views, animated with SMIL, themed through CSS variables). |
 
 Open `index.html` directly in a browser (no build step). To regenerate the PDF, print `handbook.html` to A4 with background graphics on.
