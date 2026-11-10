@@ -226,6 +226,14 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
 .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .lang button { border: 0; background: transparent; padding: 5px 9px; font: 600 0.78rem var(--f-mono); cursor: pointer; color: var(--muted); }
 .lang button[aria-pressed="true"] { background: var(--accent); color: #1c2220; }
+.dbt { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 760px; }
+.dbt th, .dbt td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.dbt th { font: 600 0.72rem var(--f-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1.5px solid var(--ink); }
+.dbt .srcs { font-size: 0.75rem; max-width: 280px; }
+.dbt .srcs a { color: var(--accent-ink); }
+.small-note { font-size: 0.8rem; color: var(--muted); }
+.warnline { border-left: 3px solid var(--warnc); background: color-mix(in srgb, var(--warnc) 10%, var(--paper)); padding: 6px 10px; margin: 0 0 6px; font-size: 0.86rem; border-radius: 0 6px 6px 0; }
+.labcard { margin-top: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 14px 16px; }
 </style>
 </head>
 <body>
@@ -254,6 +262,7 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
 <script src="fr-3.js"></script>
 <script src="i18n.js"></script>
 <script src="illustrations.js"></script>
+<script src="vibration-db.js"></script>
 <script>
 (function () {
   const SC = window.SCENES;
@@ -336,6 +345,9 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
           <button class="btn dark" id="sit" ${examUnlocked(c.id) ? "" : "disabled"}>${examUnlocked(c.id) ? (ex.passed ? t("Retake exam", "Repasser l'examen") : t("Sit the exam", "Passer l'examen")) : t("Pass Cycle " + (c.n - 1) + " first", "Réussir d'abord le cycle " + (c.n - 1))}</button>
         </div>
       </section>
+      <section class="wrap" style="padding-block:0">
+        <div class="labcard"><div><div class="eyebrow">${t("Reference tool", "Outil de référence")}</div><h3 style="margin-top:4px">${t("Vibration & airblast lab", "Labo vibrations et surpression aérienne")}</h3><span style="font-size:.9rem;color:var(--muted)">${t("Published attenuation laws, regulatory limits by country, monitoring-record check and site-law builder.", "Lois d'atténuation publiées, limites réglementaires par pays, contrôle d'enregistrement et construction de loi de site.")}</span></div><button class="btn" id="openlab" type="button">${t("Open the lab", "Ouvrir le labo")}</button></div>
+      </section>
       <section class="wrap block">
         <div class="eyebrow">${t("Professor's corrections", "Corrections du professeur")}</div><h2 style="margin:6px 0 14px">${t("Errors that travel from site to site", "Erreurs qui voyagent de site en site")}</h2>
         <div class="corr">${A.corrections.map(x => `<div class="box"><div class="claim">${esc(x.claim)}</div><p>${esc(x.fix)}</p></div>`).join("")}</div>
@@ -344,6 +356,7 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
     $("#app").querySelectorAll("[data-mod]").forEach(b => b.onclick = () => go(st.cycle + "-" + b.dataset.mod));
     $("#app").querySelectorAll(".hot").forEach(g => { const f = () => go(st.cycle + "-" + g.dataset.act); g.addEventListener("click", f); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }); });
     $("#sit").onclick = () => go("exam-" + c.id);
+    $("#openlab").onclick = () => go("vibration-lab");
     $("#motion").onclick = () => { paused = !paused; applyMotion(); $("#motion").textContent = paused ? t("Play animation", "Lancer l'animation") : t("Pause animation", "Mettre en pause"); };
     applyMotion();
   }
@@ -383,7 +396,7 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
       if (k === "tool") {
         p.innerHTML = "";
         renderTool(p, m.tool);
-        if (aid === "blasting") renderSim(p);
+        if (aid === "blasting") { renderSim(p); const lk = document.createElement("div"); lk.className = "labcard"; lk.innerHTML = `<div><b>${t("Vibration & airblast lab", "Labo vibrations et surpression aérienne")}</b><br><span style="font-size:.88rem;color:var(--muted)">${t("Choose a published attenuation law and a national standard, check a seismograph record, or fit your own site law.", "Choisissez une loi d'atténuation publiée et une norme nationale, contrôlez un enregistrement ou ajustez votre loi de site.")}</span></div><button class="btn" type="button">${t("Open the lab", "Ouvrir le labo")}</button>`; lk.querySelector("button").onclick = () => go("vibration-lab"); p.appendChild(lk); }
         if (m.tool === "evm") { const extra = document.createElement("div"); extra.style.marginTop = "26px"; p.appendChild(extra); renderTool(extra, { loadhaul: "haul", drilling: "drill", blasting: "blast", dewatering: "water", crusher: "feed", gc: "gc" }[aid]); }
       }
       applyMotion(p);
@@ -542,10 +555,141 @@ footer .wrap { display: flex; gap: 16px; justify-content: space-between; flex-wr
     return `<div class="cert"><div class="eyebrow">Bench to Boardroom · ${t("certificate of completion", "attestation de réussite")}</div><div class="who" id="certwho">${esc(st.name || t("Your name", "Votre nom"))}</div><div>${t("has passed", "a réussi")} <b>${t("Cycle", "le cycle")} ${c.n} · ${esc(c.name)}</b> ${t("with a score of", "avec un score de")} <b>${pct(sc)}</b> ${t("on", "le")} ${new Date().toISOString().slice(0, 10)}.</div><div style="font-size:.85rem;color:var(--muted)">${esc(acts)}</div><label style="display:grid;gap:4px;font-size:.8rem;color:var(--muted);width:min(320px,100%)">${t("Name on certificate", "Nom sur l'attestation")}<input type="text" id="certname" value="${esc(st.name)}"></label><div style="font-size:.8rem;color:var(--muted)">${t("Take a screenshot for the training file. Field sign-off by a supervisor is still required.", "Faites une capture d'écran pour le dossier de formation. La validation sur le terrain par un superviseur reste obligatoire.")}</div></div>`;
   }
 
+  /* ---------------- vibration & airblast lab ---------------- */
+  const V = window.VIBDB;
+  const L2 = o => (o && typeof o === "object" ? (st.lang === "fr" ? o.fr : o.en) : o);
+  const nr = x => (st.lang === "fr" ? String(x).replace(/(\d)\.(\d)/g, "$1,$2") : String(x));
+  const badge = s => `<span class="flag ${s === "verified" ? "g" : s === "partial" ? "a" : "r"}">${s === "verified" ? t("verified", "vérifié") : s === "partial" ? t("partly verified", "vérifié en partie") : t("check standard", "à vérifier")}</span>`;
+  const srcList = ids => ids.map(id => `<a href="${esc(V.sources[id].u)}" target="_blank" rel="noopener">${esc(V.sources[id].t)}</a>`).join("<br>");
+  const SAMPLE = "distance_m,mic_kg,ppv_mm_s\n160,194,34.7\n241,183,8.8\n284,144,7.0\n329,174,8.2\n391,85,3.1\n453,226,5.6\n499,299,7.7\n562,274,2.5\n627,217,2.0\n684,156,2.5\n732,302,3.2\n770,300,3.0\n850,300,2.6\n893,67,0.82\n941,322,1.4\n1014,225,1.3\n1066,190,1.5\n1108,303,1.9\n1151,76,0.68\n1216,225,0.84\n1263,174,0.60\n1332,337,2.6\n1400,292,0.99\n1451,254,0.93";
+
+  function lab() {
+    const lawOpts = V.laws.map(l => `<option value="${l.id}">${esc(L2(l.name))}</option>`).join("");
+    const stdOpts = V.vib.map(s => `<option value="${s.id}">${esc(L2(s.name))}</option>`).join("");
+    const airOpts = V.air.map(s => `<option value="${s.id}">${esc(L2(s.name))}</option>`).join("");
+    $("#app").innerHTML = `<section class="wrap block">
+      <div class="mod-head"><button class="ghost" id="back" type="button">← ${t("Home", "Accueil")}</button></div>
+      <div class="eyebrow">${t("Blasting · reference tool", "Tir · outil de référence")}</div><h2 style="margin:6px 0 8px">${t("Vibration & airblast lab", "Labo vibrations et surpression aérienne")}</h2>
+      <p>${t("A database of published attenuation laws and regulatory limits, compiled from public sources (November 2026), with calculators to predict, check monitoring records and build a site law from your own data. Each value shows how well it could be verified. Paywalled standards must be confirmed against a licensed copy before compliance use.", "Une base de lois d'atténuation publiées et de limites réglementaires, compilée à partir de sources publiques (novembre 2026), avec des calculateurs pour prévoir, contrôler les enregistrements et établir une loi de site à partir de vos données. Chaque valeur indique son niveau de vérification. Les normes payantes doivent être confirmées sur une copie officielle avant tout usage de conformité.")}</p>
+      <div class="tabs" role="tablist">${[["predict", t("Predict & comply", "Prévoir et vérifier")], ["record", t("Check a monitoring record", "Contrôler un enregistrement")], ["fit", t("Build a site law", "Établir une loi de site")], ["db", t("Database & sources", "Base et sources")]].map(([k, l], i) => `<button class="tab" role="tab" data-lt="${k}" aria-selected="${i === 0}">${l}</button>`).join("")}</div>
+      <div class="panel" id="lp-predict">
+        <div class="calc"><div class="fields">
+          <label style="grid-column:1/-1">${t("Attenuation law", "Loi d'atténuation")}<select id="lb-law">${lawOpts}</select></label>
+          <label style="grid-column:1/-1">${t("Vibration standard", "Norme vibrations")}<select id="lb-std">${stdOpts}</select></label>
+          <label style="grid-column:1/-1">${t("Structure class", "Classe de structure")}<select id="lb-cls"></select></label>
+          <label>${t("Distance to structure (m)", "Distance à la structure (m)")}<input id="lb-d" type="number" value="600"></label>
+          <label>${t("Charge per 8 ms delay (kg)", "Charge par retard de 8 ms (kg)")}<input id="lb-q" type="number" value="150"></label>
+          <label>${t("Expected dominant frequency (Hz)", "Fréquence dominante attendue (Hz)")}<input id="lb-f" type="number" value="10"></label>
+          <label>${t("Airblast Ka (10 well stemmed – 100 poor)", "Ka surpression (10 bien bourré – 100 médiocre)")}<input id="lb-ka" type="number" value="55"></label>
+          <label style="grid-column:1/-1">${t("Airblast standard", "Norme surpression aérienne")}<select id="lb-air">${airOpts}</select></label>
+        </div><div style="display:grid;gap:10px;align-content:start;min-width:0"><div class="out" id="lb-out"></div><p class="small-note" id="lb-note"></p></div></div>
+      </div>
+      <div class="panel" id="lp-record" hidden>
+        <p>${t("Enter the three channel maxima exactly as the seismograph prints them. The check converts units, reports the true peak (never an average), converts overpressure to dB(L) and compares with the selected limits.", "Saisissez les maxima des trois voies exactement comme le sismographe les imprime. Le contrôle convertit les unités, donne le vrai pic (jamais une moyenne), convertit la surpression en dB(L) et compare aux limites choisies.")}</p>
+        <div class="calc"><div class="fields">
+          <label>${t("Unit printed by the device", "Unité imprimée par l'appareil")}<select id="rc-u"><option value="10">cm/s</option><option value="1">mm/s</option><option value="25.4">in/s</option></select></label>
+          <label>${t("Dominant frequency (Hz)", "Fréquence dominante (Hz)")}<input id="rc-f" type="number" value="8.5"></label>
+          <label>${t("Max X / longitudinal", "Max X / longitudinal")}<input id="rc-x" type="number" step="any" value="0.0870"></label>
+          <label>${t("Max Y / transverse", "Max Y / transversal")}<input id="rc-y" type="number" step="any" value="0.0412"></label>
+          <label>${t("Max Z / vertical", "Max Z / vertical")}<input id="rc-z" type="number" step="any" value="0.1034"></label>
+          <label>${t("Peak overpressure (Pa)", "Surpression de crête (Pa)")}<input id="rc-pa" type="number" step="any" value="28.5"></label>
+          <label>${t("dB(A) shown on the report (optional)", "dB(A) affiché sur le rapport (optionnel)")}<input id="rc-dba" type="number" step="any" value="80.1"></label>
+          <label>${t("Distance blast → monitor (m), if known", "Distance tir → capteur (m), si connue")}<input id="rc-d" type="number" value=""></label>
+          <label>${t("Charge per 8 ms (kg), if known", "Charge par 8 ms (kg), si connue")}<input id="rc-q" type="number" value=""></label>
+        </div><div style="display:grid;gap:10px;align-content:start;min-width:0"><div class="out" id="rc-out"></div><div id="rc-warn"></div></div></div>
+        <p class="small-note">${t("Illustrative example values, in the format many seismographs print (cm/s, Pa, dB(A)). Replace with your record. Uses the standards selected in the Predict tab.", "Valeurs d'exemple illustratives, au format imprimé par de nombreux sismographes (cm/s, Pa, dB(A)). Remplacez par votre enregistrement. Utilise les normes choisies dans l'onglet Prévoir.")}</p>
+      </div>
+      <div class="panel" id="lp-fit" hidden>
+        <p>${t("Paste one blast per line: distance (m), charge per 8 ms (kg), peak PPV (mm/s). Use at least 20–30 independent readings spread over a wide range of distances; design on the 95% line, not the median.", "Collez un tir par ligne : distance (m), charge par 8 ms (kg), VPP de crête (mm/s). Utilisez au moins 20 à 30 mesures indépendantes réparties sur une large plage de distances ; dimensionnez sur la droite à 95 %, pas sur la médiane.")}</p>
+        <div class="simgrid"><div style="display:grid;gap:8px;min-width:0"><textarea id="ft-data" rows="14" spellcheck="false" style="width:100%;font:0.85rem var(--f-mono);padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)">${SAMPLE}</textarea>
+          <div class="row" style="margin-top:0"><button class="btn" id="ft-run" type="button">${t("Fit site law", "Ajuster la loi")}</button><button class="ghost" id="ft-clear" type="button">${t("Clear", "Effacer")}</button></div>
+          <p class="small-note">${t("Pre-filled rows are synthetic, generated for training (k ≈ 900, β ≈ 1.5 with scatter). They are not measurements from any site.", "Les lignes préremplies sont synthétiques, générées pour la formation (k ≈ 900, β ≈ 1,5 avec dispersion). Ce ne sont les mesures d'aucun site.")}</p></div>
+          <div style="display:grid;gap:10px;min-width:0"><div class="plan" id="ft-chart"></div><div class="out" id="ft-out"></div></div></div>
+      </div>
+      <div class="panel" id="lp-db" hidden>
+        <h3>${t("Ground-vibration attenuation laws", "Lois d'atténuation des vibrations")}</h3>
+        <div style="overflow-x:auto"><table class="dbt"><thead><tr><th>${t("Law", "Loi")}</th><th>${t("Form", "Forme")}</th><th>${t("Constants", "Constantes")}</th><th>${t("Use", "Usage")}</th><th>${t("Sources", "Sources")}</th></tr></thead><tbody>
+        ${V.laws.map(l => `<tr><td><b>${esc(L2(l.name))}</b><br>${badge(l.status)}</td><td class="mono">${l.form === "davies" ? "k·D<sup>−b</sup>·Q<sup>a</sup>" : "k·(D/√Q)<sup>−β</sup>"}</td><td class="mono">${l.form === "davies" ? `k ${l.k}<br>a ${l.a}<br>b ${l.b}` : `k ${l.k}<br>β ${l.beta}`}</td><td>${esc(L2(l.context))}</td><td class="srcs">${srcList(l.src)}</td></tr>`).join("")}
+        ${V.airLaws.map(l => `<tr><td><b>${t("Airblast: ", "Surpression : ")}${esc(L2(l.name))}</b><br>${badge(l.status)}</td><td class="mono">P(kPa) = Ka·(D/∛Q)<sup>−a</sup></td><td class="mono">Ka ${l.Ka}${l.range ? " (" + l.range + ")" : ""}<br>a ${l.a}</td><td>${esc(L2(l.context))}</td><td class="srcs">${srcList(l.src)}</td></tr>`).join("")}
+        </tbody></table></div>
+        <h3 style="margin-top:20px">${t("Vibration limits", "Limites de vibrations")}</h3>
+        <div style="overflow-x:auto"><table class="dbt"><thead><tr><th>${t("Standard", "Norme")}</th><th>${t("Classes and values", "Classes et valeurs")}</th><th>${t("Notes", "Notes")}</th><th>${t("Sources", "Sources")}</th></tr></thead><tbody>
+        ${V.vib.map(s => `<tr><td><b>${esc(L2(s.name))}</b><br>${badge(s.status)}<br><span class="small-note">${s.metric === "vector" ? t("peak vector sum", "somme vectorielle de crête") : t("peak component", "composante de crête")}</span></td><td>${s.classes.map(c => `<div><b>${esc(L2(c.label))}</b>: <span class="mono">${nr(c.flat != null ? c.flat + " (max " + c.max + ")" : c.dist ? c.dist.map(r => r[1]).join(" / ") : c.bands ? c.bands.map(r => r[2]).join(" / ") : c.points.map(p => p[1] + "@" + p[0] + "Hz").join(", "))}</span></div>`).join("")}</td><td>${esc(L2(s.note))}</td><td class="srcs">${srcList(s.src)}</td></tr>`).join("")}
+        </tbody></table></div>
+        <h3 style="margin-top:20px">${t("Airblast limits", "Limites de surpression aérienne")}</h3>
+        <div style="overflow-x:auto"><table class="dbt"><thead><tr><th>${t("Standard", "Norme")}</th><th>dBL</th><th>${t("Notes", "Notes")}</th><th>${t("Sources", "Sources")}</th></tr></thead><tbody>
+        ${V.air.map(s => `<tr><td><b>${esc(L2(s.name))}</b><br>${badge(s.status)}</td><td class="mono">${s.limit}${s.max !== s.limit ? " / " + s.max : ""}</td><td>${esc(L2(s.note))}</td><td class="srcs">${srcList(s.src)}</td></tr>`).join("")}
+        </tbody></table></div>
+        <p class="small-note">${t("Database compiled in November 2026 from public regulator texts, standards listings, manufacturer guides and peer-reviewed case studies. Where a public source could not confirm a value it is marked. Local law and permit conditions always take precedence.", "Base compilée en novembre 2026 à partir de textes réglementaires publics, de fiches de normes, de guides fabricants et d'études de cas publiées. Les valeurs non confirmées par une source publique sont signalées. La loi locale et les conditions du permis priment toujours.")}</p>
+      </div></section>`;
+    $("#back").onclick = () => go("home");
+    $("#app").querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { $("#app").querySelectorAll("[data-lt]").forEach(x => x.setAttribute("aria-selected", x === b)); ["predict", "record", "fit", "db"].forEach(k => $("#lp-" + k).hidden = k !== b.dataset.lt); });
+    const fillCls = () => { const s = V.vib.find(x => x.id === $("#lb-std").value); $("#lb-cls").innerHTML = s.classes.map(c => `<option value="${c.id}">${esc(L2(c.label))}</option>`).join(""); };
+    $("#lb-std").value = "gb6722"; fillCls(); $("#lb-cls").value = "adobe";
+    const num = id => parseFloat(($("#" + id).value || "").replace(",", "."));
+    function predict() {
+      const law = $("#lb-law").value, std = $("#lb-std").value, cls = $("#lb-cls").value, D = num("lb-d"), Q = num("lb-q"), f = num("lb-f"), Ka = num("lb-ka");
+      const ppv = V.ppv(law, D, Q), lim = V.limit(std, cls, f, D), qmax = V.maxCharge(law, D, lim.v), air = V.airDb("air-confined", D, Q, Ka), as = V.air.find(x => x.id === $("#lb-air").value);
+      const L = V.laws.find(x => x.id === law);
+      $("#lb-out").innerHTML = [[t("Scaled distance D/√Q", "Distance réduite D/√Q"), fmt(D / Math.sqrt(Q), 1) + " m/kg½"], [t("Predicted PPV", "VPP prévue"), fmt(ppv, 2) + " mm/s", ppv > lim.v ? ["r", t("above limit", "au-dessus de la limite")] : ppv > 0.5 * lim.v ? ["a", t("> 50% of limit", "> 50 % de la limite")] : ["g", "ok"]],
+        [t("Limit for this class and frequency", "Limite pour cette classe et fréquence"), fmt(lim.v, 1) + " mm/s" + (lim.range ? " (" + t("range ", "plage ") + nr(lim.range) + " mm/s)" : "") + (lim.max ? " · max " + lim.max : ""), null], [t("Metric required by the standard", "Grandeur exigée par la norme"), lim.metric === "vector" ? t("peak vector sum", "somme vectorielle de crête") : t("peak of any single axis", "crête de l'axe le plus fort"), null],
+        [t("Max charge per 8 ms for this limit", "Charge max. par 8 ms pour cette limite"), fmt(qmax, 0) + " kg", Q > qmax ? ["r", t("reduce charge", "réduire la charge")] : ["g", "ok"]],
+        [t("Predicted airblast", "Surpression prévue"), fmt(air.dBL, 1) + " dBL (" + fmt(air.kPa * 1000, 1) + " Pa)", air.dBL > as.max ? ["r", t("above maximum", "au-dessus du maximum")] : air.dBL > as.limit ? ["a", t("above routine limit", "au-dessus de la limite courante")] : ["g", "ok"]]]
+        .map(r => `<div><span>${r[0]}</span><b>${r[1]}${r[2] ? `<span class="flag ${r[2][0]}">${r[2][1]}</span>` : ""}</b></div>`).join("");
+      $("#lb-note").innerHTML = esc(L2(L.context)) + " " + badge(L.status) + "<br>" + esc(L2(V.vib.find(x => x.id === std).note));
+      record();
+    }
+    function record() {
+      const u = parseFloat($("#rc-u").value), x = num("rc-x") * u, y = num("rc-y") * u, z = num("rc-z") * u, f = num("rc-f"), pa = num("rc-pa"), dba = num("rc-dba"), D = num("rc-d"), Q = num("rc-q");
+      const pk = Math.max(x, y, z), pvs = Math.sqrt(x * x + y * y + z * z), avgRaw = (num("rc-x") + num("rc-y") + num("rc-z")) / 3, dbl = V.dBL(pa);
+      const std = $("#lb-std").value, lim = V.limit(std, $("#lb-cls").value, f, D), as = V.air.find(a => a.id === $("#lb-air").value);
+      const ppvUsed = lim.metric === "vector" ? pvs : pk;
+      const rows = [[t("Peak component (largest axis)", "Composante de crête (axe le plus fort)"), fmt(pk, 2) + " mm/s"], [t("Peak vector sum (upper bound)", "Somme vectorielle (borne supérieure)"), fmt(pvs, 2) + " mm/s"],
+        [t("Value compared with the standard", "Valeur comparée à la norme"), fmt(ppvUsed, 2) + " / " + fmt(lim.v, 1) + " mm/s", ppvUsed > lim.v ? ["r", t("exceeds", "dépasse")] : ppvUsed > 0.5 * lim.v ? ["a", "> 50 %"] : ["g", "ok"]],
+        [t("Airblast from pressure", "Surpression à partir de la pression"), fmt(dbl, 1) + " dBL", dbl > as.max ? ["r", t("above maximum", "au-dessus du maximum")] : dbl > as.limit ? ["a", t("above routine limit", "au-dessus de la limite courante")] : ["g", "ok"]]];
+      if (D > 0 && Q > 0) { const sd = D / Math.sqrt(Q); rows.push([t("Scaled distance", "Distance réduite"), fmt(sd, 1) + " m/kg½"], [t("Implied k (β 1.6)", "k implicite (β 1,6)"), fmt(pk * Math.pow(sd, 1.6), 0), null]); }
+      $("#rc-out").innerHTML = rows.map(r => `<div><span>${r[0]}</span><b>${r[1]}${r[2] ? `<span class="flag ${r[2][0]}">${r[2][1]}</span>` : ""}</b></div>`).join("");
+      const w = [];
+      if (u === 10) w.push(t(`The device prints cm/s. Reported in mm/s without conversion, ${fmt(pk / 10, 4)} would understate the peak ten times.`, `L'appareil imprime des cm/s. Reporté en mm/s sans conversion, ${fmt(pk / 10, 4)} sous-estimerait le pic de dix fois.`));
+      w.push(t(`Never average the three axes: the average of the printed values (${fmt(avgRaw, 4)}) is not a PPV. Report the largest axis or the vector sum, as your standard requires.`, `Ne faites jamais la moyenne des trois axes : la moyenne des valeurs imprimées (${fmt(avgRaw, 4)}) n'est pas une VPP. Déclarez l'axe le plus fort ou la somme vectorielle, selon la norme.`));
+      if (isFinite(dba) && isFinite(dbl) && dbl - dba > 10) w.push(t(`dB(A) is a hearing scale: ${fmt(dba, 1)} dB(A) here corresponds to ${fmt(dbl, 1)} dB(L). Airblast limits are in dB(L) (linear peak).`, `Le dB(A) est une échelle auditive : ${fmt(dba, 1)} dB(A) correspond ici à ${fmt(dbl, 1)} dB(L). Les limites de surpression sont en dB(L) (crête linéaire).`));
+      if (f < 4) w.push(t("Below 4 Hz most damage criteria switch to a displacement limit; low-amplitude readings at the frequency floor are often background noise.", "Sous 4 Hz la plupart des critères passent à une limite en déplacement ; les faibles amplitudes à la fréquence plancher sont souvent du bruit de fond."));
+      if (!(D > 0)) w.push(t("No distance recorded: this reading cannot be used to build a site law. Record blast centre and monitor coordinates for every blast.", "Pas de distance enregistrée : cette mesure ne peut pas servir à établir une loi de site. Enregistrez les coordonnées du centre du tir et du capteur à chaque tir."));
+      $("#rc-warn").innerHTML = w.map(x => `<p class="warnline">${x}</p>`).join("");
+    }
+    function fit() {
+      const rows = $("#ft-data").value.split(/\r?\n/).map(l => l.split(/[;,\t ]+/).map(s => parseFloat(s.replace(",", ".")))).filter(a => a.length >= 3 && a.every(isFinite)).map(a => ({ D: a[0], Q: a[1], ppv: a[2] }));
+      const r = V.fit(rows);
+      if (r.n < 3) { $("#ft-out").innerHTML = `<div><span>${t("Rows read", "Lignes lues")}</span><b>${r.n}</b></div>`; $("#ft-chart").innerHTML = ""; return; }
+      const std = $("#lb-std").value, lim = V.limit(std, $("#lb-cls").value, num("lb-f"), num("lb-d")), D = num("lb-d");
+      const q95 = Math.pow(D / Math.pow(r.k95 / lim.v, 1 / r.beta), 2);
+      $("#ft-out").innerHTML = [[t("Readings used", "Mesures utilisées"), r.n, r.n < 20 ? ["a", t("< 20: provisional", "< 20 : provisoire")] : ["g", "ok"]], [t("Median law", "Loi médiane"), `k ${fmt(r.k50, 0)} · β ${fmt(r.beta, 2)}`], ["R²", fmt(r.r2, 2), r.r2 < 0.6 ? ["a", t("weak fit", "ajustement faible")] : ["g", "ok"]], [t("95% design law", "Loi de conception 95 %"), `k ${fmt(r.k95, 0)} · β ${fmt(r.beta, 2)}`],
+        [t("Max charge per 8 ms at Predict distance and limit (95%)", "Charge max. par 8 ms à la distance et limite de l'onglet Prévoir (95 %)"), fmt(q95, 0) + " kg"]].map(x => `<div><span>${x[0]}</span><b>${x[1]}${x[2] ? `<span class="flag ${x[2][0]}">${x[2][1]}</span>` : ""}</b></div>`).join("");
+      const W = 520, H = 320, x0 = 56, y0 = 20, w = W - x0 - 16, h = H - y0 - 44, lx = v => x0 + (Math.log10(v) - 0) / 3 * w, ly = v => y0 + h - (Math.log10(v) + 2) / 5 * h;
+      let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${t("Scaled distance versus PPV, log-log", "Distance réduite et VPP, log-log")}">`;
+      [1, 10, 100, 1000].forEach(v => s += `<line class="axis" x1="${lx(v)}" y1="${y0}" x2="${lx(v)}" y2="${y0 + h}"/><text x="${lx(v)}" y="${y0 + h + 14}" text-anchor="middle">${v}</text>`);
+      [0.01, 0.1, 1, 10, 100, 1000].forEach(v => s += `<line class="axis" x1="${x0}" y1="${ly(v)}" x2="${x0 + w}" y2="${ly(v)}"/><text x="${x0 - 6}" y="${ly(v) + 3}" text-anchor="end">${v}</text>`);
+      s += `<text x="${x0 + w / 2}" y="${H - 6}" text-anchor="middle">${t("Scaled distance D/√Q (m/kg½)", "Distance réduite D/√Q (m/kg½)")}</text><text x="12" y="${y0 + h / 2}" transform="rotate(-90 12 ${y0 + h / 2})" text-anchor="middle">PPV (mm/s)</text>`;
+      const line = (k, b, cls, dash) => { const a = 1, z = 1000; s += `<line x1="${lx(a)}" y1="${ly(Math.max(0.01, Math.min(1000, k * Math.pow(a, -b))))}" x2="${lx(z)}" y2="${ly(Math.max(0.01, k * Math.pow(z, -b)))}" stroke="var(--${cls})" stroke-width="2" ${dash ? `stroke-dasharray="6 4"` : ""}/>`; };
+      line(1140, 1.6, "muted", true); line(r.k50, r.beta, "ink"); line(r.k95, r.beta, "bad");
+      s += `<line x1="${x0}" y1="${ly(lim.v)}" x2="${x0 + w}" y2="${ly(lim.v)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="2 3"/>`;
+      rows.forEach(p => { const sd = p.D / Math.sqrt(p.Q); if (sd >= 1 && sd <= 1000 && p.ppv >= 0.01 && p.ppv <= 1000) s += `<circle cx="${lx(sd)}" cy="${ly(p.ppv)}" r="3.5" fill="var(--accent)" stroke="var(--ink)" stroke-width="0.8"/>`; });
+      s += `<g transform="translate(${x0 + w - 190},${y0 + 8})"><rect width="186" height="66" rx="4" fill="var(--paper)" stroke="var(--line)"/><line x1="8" y1="14" x2="30" y2="14" stroke="var(--ink)" stroke-width="2"/><text x="36" y="17">${t("median fit", "ajustement médian")}</text><line x1="8" y1="30" x2="30" y2="30" stroke="var(--bad)" stroke-width="2"/><text x="36" y="33">${t("95% design line", "droite de conception 95 %")}</text><line x1="8" y1="46" x2="30" y2="46" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 4"/><text x="36" y="49">${t("generic k 1140, β 1.6", "générique k 1140, β 1,6")}</text><line x1="8" y1="60" x2="30" y2="60" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="2 3"/><text x="36" y="63">${t("selected limit", "limite choisie")}</text></g>`;
+      $("#ft-chart").innerHTML = s + "</svg>";
+    }
+    ["lb-law", "lb-cls", "lb-d", "lb-q", "lb-f", "lb-ka", "lb-air"].forEach(id => $("#" + id).addEventListener("input", predict));
+    $("#lb-std").addEventListener("input", () => { fillCls(); predict(); });
+    ["rc-u", "rc-f", "rc-x", "rc-y", "rc-z", "rc-pa", "rc-dba", "rc-d", "rc-q"].forEach(id => $("#" + id).addEventListener("input", record));
+    $("#ft-run").onclick = fit; $("#ft-clear").onclick = () => { $("#ft-data").value = "distance_m,mic_kg,ppv_mm_s\n"; fit(); };
+    predict(); fit();
+    window.scrollTo(0, 0);
+  }
+
   /* ---------------- router ---------------- */
   function go(h) { if (location.hash.slice(1) !== h) location.hash = h; else route(); }
   function route() {
     const h = location.hash.slice(1); chrome(); chips();
+    if (h === "vibration-lab") return lab();
     const cy = A.cycles.map(c => c.id);
     if (h.startsWith("exam-") && cy.includes(h.slice(5))) { st.cycle = h.slice(5); save(); chips(); return exam(h.slice(5)); }
     const [c, a] = h.split("-");

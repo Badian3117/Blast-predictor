@@ -88,6 +88,11 @@ th { font: 600 7.5pt var(--f-mono); text-transform: uppercase; letter-spacing: 0
 @media screen { body { background: #e8ebe6; } .doc { background: #fff; padding: 14mm 16mm; margin: 16px auto; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
   .page { border-top: 1px dashed var(--line); padding-top: 10mm; margin-top: 10mm; } }
 @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } .toc, .key { columns: 1; } .cover h1 { font-size: 30pt; } .doc { padding: 16px; } }
+/* Appendix G: long source URLs must wrap or Chromium shrinks the whole document to fit */
+.appg table { table-layout: fixed; }
+.appg td, .appg th { overflow-wrap: anywhere; }
+.appg .url { word-break: break-all; color: var(--muted); font-size: 7pt; }
+.appg .src { margin-top: 1.2mm; }
 /* French translation: smaller italic, under each English block */
 .fr { font-size: 0.86em; font-style: italic; color: #4a5450; font-weight: 400; }
 div.fr, p.fr { border-left: 1.5px solid var(--line); padding-left: 2.5mm; margin: 1mm 0 2.6mm; }
@@ -107,6 +112,7 @@ td .fr, li .fr, .q .fr, .formula .fr { display: block; }
 <script src="fr-3.js"></script>
 <script src="i18n.js"></script>
 <script src="illustrations.js"></script>
+<script src="vibration-db.js"></script>
 <script>
 (function () {
   const A = window.ACADEMY, F = window.academyFor("fr"), S = window.SCENES;
@@ -128,13 +134,13 @@ td .fr, li .fr, .q .fr, .formula .fr { display: block; }
       <p class="sub" style="margin-top:4mm">From graduate engineer to project manager in six open-pit activities: load and haul, drilling, blasting, dewatering, crusher feed and grade control. Courses, field tips, exercises and end-of-cycle exams.</p>
       <p class="sub fr">De l'ingénieur débutant au chef de projet, en six activités de mine à ciel ouvert : chargement-transport, foration, tir, exhaure, alimentation du concasseur et contrôle des teneurs. Cours, conseils de terrain, exercices et examens de fin de cycle.</p></div>
     <div>${S.hero({ animate: false })}</div>
-    <div class="meta"><div><b>Audience · Public</b>Junior engineers on hard-rock gold operations, West Africa<span class="fr">Jeunes ingénieurs des mines d'or en roche dure, Afrique de l'Ouest</span></div><div><b>Structure</b>3 cycles · 18 modules · 45 exam questions<span class="fr">3 cycles · 18 modules · 45 questions d'examen</span></div><div><b>Edition · Édition</b>1.1 · November 2026 · SI units · EN / FR<span class="fr">1.1 · novembre 2026 · unités SI · bilingue</span></div></div>
+    <div class="meta"><div><b>Audience · Public</b>Junior engineers on hard-rock gold operations, West Africa<span class="fr">Jeunes ingénieurs des mines d'or en roche dure, Afrique de l'Ouest</span></div><div><b>Structure</b>3 cycles · 18 modules · 45 exam questions<span class="fr">3 cycles · 18 modules · 45 questions d'examen</span></div><div><b>Edition · Édition</b>1.2 · November 2026 · SI units · EN / FR<span class="fr">1.2 · novembre 2026 · unités SI · bilingue</span></div></div>
   </section>`;
 
   /* contents */
   const toc = [["", "Foreword from the professor", "Avant-propos du professeur"], ["", "How the programme works", "Fonctionnement du programme"], ["", "Standards and the approval gates", "Normes et points d'autorisation"]];
   A.cycles.forEach((c, k) => { toc.push(["Part " + ["I", "II", "III"][k], "Cycle " + c.n + " · " + c.name, "Cycle " + c.n + " · " + F.cycles[k].name]); A.activities.forEach((a, i) => toc.push([c.n + "." + (i + 1), a.name, F.activities[i].name])); toc.push([c.n + ".E", "Cycle " + c.n + " exam", "Examen du cycle " + c.n]); });
-  [["A", "Professor's corrections", "Corrections du professeur"], ["B", "Worked solutions", "Solutions détaillées"], ["C", "Exam answer keys", "Corrigés des examens"], ["D", "Formula sheet", "Formulaire"], ["E", "Glossary English–French", "Glossaire anglais–français"], ["F", "References", "Références"]].forEach(x => toc.push(["App. " + x[0], x[1], x[2]]));
+  [["A", "Professor's corrections", "Corrections du professeur"], ["B", "Worked solutions", "Solutions détaillées"], ["C", "Exam answer keys", "Corrigés des examens"], ["D", "Formula sheet", "Formulaire"], ["E", "Glossary English–French", "Glossaire anglais–français"], ["F", "References", "Références"], ["G", "Vibration and airblast database", "Base vibrations et surpression aérienne"]].forEach(x => toc.push(["App. " + x[0], x[1], x[2]]));
   h += `<section class="page"><h2>${fi("Contents", "Sommaire")}</h2><ol class="toc">${toc.map(x => `<li><span class="n">${x[0]}</span><span>${fi(x[1], x[2])}</span></li>`).join("")}</ol></section>`;
 
   /* foreword */
@@ -224,6 +230,27 @@ td .fr, li .fr, .q .fr, .formula .fr { display: block; }
   h += `<section class="page"><div class="eyebrow">Appendix F · Annexe F</div><h2>${fi("References", "Références")}</h2><ol>${A.references.map(r => `<li>${esc(r)}</li>`).join("")}</ol>
     ${fp("This handbook is a training document. It does not replace site-approved designs, procedures, supplier instructions or national regulations.", "Ce manuel est un document de formation. Il ne remplace ni les plans approuvés du site, ni ses procédures, ni les instructions des fournisseurs, ni la réglementation nationale.")}</section>`;
 
+  /* Appendix G: vibration & airblast database */
+  { const V = window.VIBDB, en = o => o.en, frn = o => o.fr;
+    const st = s => s === "verified" ? fi("verified", "vérifié") : s === "partial" ? fi("partly verified", "vérifié en partie") : fi("check standard", "à vérifier");
+    const srcs = ids => ids.map(id => `<div class="small src">${esc(V.sources[id].t)}<br><span class="url">${esc(V.sources[id].u)}</span></div>`).join("");
+    h += `<section class="page appg"><div class="eyebrow">Appendix G · Annexe G</div><h2>${fi("Vibration and airblast database", "Base vibrations et surpression aérienne")}</h2>
+      ${fp("Compiled in November 2026 from public regulator texts, standards listings, manufacturer guides and peer-reviewed case studies. Each value states how well it could be verified from public sources. Paywalled standards (AS 2187.2, DIN 4150-3, BS 7385-2, GB 6722) must be checked against a licensed copy before compliance use; local law and permit conditions always take precedence. The interactive tool's Vibration & airblast lab uses this database.", "Compilée en novembre 2026 à partir de textes réglementaires publics, de fiches de normes, de guides fabricants et d'études de cas publiées. Chaque valeur indique son niveau de vérification par des sources publiques. Les normes payantes (AS 2187.2, DIN 4150-3, BS 7385-2, GB 6722) doivent être vérifiées sur une copie officielle avant tout usage de conformité ; la loi locale et les conditions du permis priment toujours. Le Labo vibrations et surpression aérienne de l'outil interactif utilise cette base.")}
+      <h3>${fi("Attenuation laws", "Lois d'atténuation")}</h3>
+      <table><thead><tr><th>${fi("Law", "Loi")}</th><th>${fi("Constants", "Constantes")}</th><th>${fi("Use", "Usage")}</th><th>${fi("Status", "Statut")}</th></tr></thead><tbody>
+      ${V.laws.map(l => `<tr><td><b>${fi(en(l.name), frn(l.name))}</b></td><td style="font-family:var(--f-mono)">${l.form === "davies" ? `PPV = ${l.k}·D<sup>−${l.b}</sup>·Q<sup>${l.a}</sup>` : `PPV = ${l.k}·(D/√Q)<sup>−${l.beta}</sup>`}</td><td>${fi(en(l.context), frn(l.context))}${srcs(l.src)}</td><td>${st(l.status)}</td></tr>`).join("")}
+      ${V.airLaws.map(l => `<tr><td><b>${fi("Airblast: " + en(l.name), "Surpression : " + frn(l.name))}</b></td><td style="font-family:var(--f-mono)">P(kPa) = ${l.Ka}·(D/∛Q)<sup>−${l.a}</sup>${l.range ? "<br>Ka " + l.range : ""}</td><td>${fi(en(l.context), frn(l.context))}${srcs(l.src)}</td><td>${st(l.status)}</td></tr>`).join("")}
+      </tbody></table>
+      <h3>${fi("Vibration limits (PPV, mm/s)", "Limites de vibrations (VPP, mm/s)")}</h3>
+      <table><thead><tr><th>${fi("Standard", "Norme")}</th><th>${fi("Classes and values", "Classes et valeurs")}</th><th>${fi("Notes", "Notes")}</th><th>${fi("Status", "Statut")}</th></tr></thead><tbody>
+      ${V.vib.map(s => `<tr><td><b>${fi(en(s.name), frn(s.name))}</b><br><span class="small">${s.metric === "vector" ? fi("peak vector sum", "somme vectorielle de crête") : fi("peak component", "composante de crête")}</span></td><td>${s.classes.map(c => `<div>${fi(en(c.label), frn(c.label))}: <span style="font-family:var(--f-mono)">${c.flat != null ? c.flat + " (max " + c.max + ")" : c.dist ? c.dist.map(r => r[1]).join(" / ") : c.bands ? c.bands.map(r => r[2]).join(" / ") : c.points.map(p => p[1] + "@" + p[0] + " Hz").join(", ")}</span></div>`).join("")}</td><td>${fi(en(s.note), frn(s.note))}${srcs(s.src)}</td><td>${st(s.status)}</td></tr>`).join("")}
+      </tbody></table>
+      <h3>${fi("Airblast limits (dB linear peak)", "Limites de surpression aérienne (dB linéaire crête)")}</h3>
+      <table><thead><tr><th>${fi("Standard", "Norme")}</th><th>dBL</th><th>${fi("Notes", "Notes")}</th><th>${fi("Status", "Statut")}</th></tr></thead><tbody>
+      ${V.air.map(s => `<tr><td><b>${fi(en(s.name), frn(s.name))}</b></td><td style="font-family:var(--f-mono)">${s.limit}${s.max !== s.limit ? " / " + s.max : ""}</td><td>${fi(en(s.note), frn(s.note))}${srcs(s.src)}</td><td>${st(s.status)}</td></tr>`).join("")}
+      </tbody></table>
+      <div class="box prof"><h4>${fi("Reading a seismograph record", "Lire un enregistrement de sismographe")}</h4>${fp("1. Copy the unit from the printout (many devices print cm/s). 2. Report the largest axis or the vector sum, never the average. 3. Convert overpressure to dB(L): 20·log10(P / 20 µPa); dB(A) is not an airblast unit. 4. Record blast centre, monitor position and charge per 8 ms, or the reading cannot build a site law.", "1. Recopiez l'unité de l'impression (beaucoup d'appareils impriment des cm/s). 2. Déclarez l'axe le plus fort ou la somme vectorielle, jamais la moyenne. 3. Convertissez la surpression en dB(L) : 20·log10(P / 20 µPa) ; le dB(A) n'est pas une unité de surpression. 4. Enregistrez le centre du tir, la position du capteur et la charge par 8 ms, sinon la mesure ne peut pas servir à une loi de site.")}</div>
+    </section>`; }
   document.getElementById("doc").innerHTML = h;
   document.querySelectorAll("svg").forEach(s => { try { s.pauseAnimations(); s.setCurrentTime(2.5); } catch (e) {} });
 })();
