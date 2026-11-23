@@ -1,0 +1,68 @@
+name: Doublons (Windows exe)
+
+on:
+  push:
+    paths:
+      - "doublons/**"
+      - ".github/workflows/doublons.yml"
+    tags:
+      - "doublons-v*"
+  pull_request:
+    paths:
+      - "doublons/**"
+      - ".github/workflows/doublons.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: doublons
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tests
+        run: python -m unittest discover -s tests -v
+      - name: Drive detection smoke test
+        run: python -m doublons_app --list-drives
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: doublons
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build exe
+        run: |
+          pip install pyinstaller==6.11.1
+          pyinstaller --onefile --windowed --name Doublons Doublons.pyw
+      - name: Check exe
+        shell: pwsh
+        run: if (-not (Test-Path dist/Doublons.exe)) { throw "exe missing" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Doublons-windows
+          path: doublons/dist/Doublons.exe
+          retention-days: 30
+      - name: Attach to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/doublons-v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" dist/Doublons.exe --title "Doublons ${{ github.ref_name }}" --notes "Recherche de fichiers en double (nom + extension) sur plusieurs disques. Double-cliquez sur Doublons.exe." 2>$null
+          if ($LASTEXITCODE -ne 0) { gh release upload "${{ github.ref_name }}" dist/Doublons.exe --clobber }
