@@ -2,6 +2,7 @@ import os
 import sys
 import tempfile
 import unittest
+from urllib.parse import quote
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -60,7 +61,7 @@ class FileActionsTest(unittest.TestCase):
             self.assertEqual(sorted(os.listdir(os.path.join(trash, "files"))), ["doc.2.txt", "doc.txt"])
             self.assertTrue(os.path.exists(d1) and os.path.exists(d2))
             with open(os.path.join(trash, "info", "doc.txt.trashinfo")) as fh:
-                self.assertIn("Path=" + f1.replace(" ", "%20"), fh.read())
+                self.assertIn("Path=" + quote(os.path.abspath(f1)), fh.read())
             delete_permanently(d1)
             delete_permanently(d1)                     # déjà supprimé : pas d'erreur
             self.assertFalse(os.path.exists(d1))
