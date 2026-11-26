@@ -440,3 +440,56 @@ def export_csv(groups: list[DuplicateGroup], path: str) -> None:
             for f in g.files:
                 w.writerow([i, g.name, g.count, len(g.roots), g.verdict, f.root, f.path,
                             f.size, datetime.fromtimestamp(f.mtime).strftime("%Y-%m-%d %H:%M")])
+
+
+# --------------------------------------------------------------------------- #
+# Sélection automatique et mise à jour après suppression
+# --------------------------------------------------------------------------- #
+KEEP_NEWEST = "newest"
+KEEP_OLDEST = "oldest"
+KEEP_SHORTEST = "shortest"
+
+
+def select_copies(groups: list[DuplicateGroup], keep: str = KEEP_NEWEST,
+                  keep_root: str | None = None,
+                  verified_only: bool = True) -> list[FileEntry]:
+    """Retourne les fichiers à supprimer en gardant UNE copie par groupe.
+
+    keep        : critère de la copie conservée (plus récente, plus ancienne, chemin le plus court).
+    keep_root   : si donné, garde la copie située sur ce disque ; groupe ignoré s'il n'y en a pas.
+    verified_only : ne touche qu'aux groupes dont le contenu a été vérifié identique.
+    Ne sélectionne jamais toutes les copies d'un groupe.
+    """
+    out: list[FileEntry] = []
+    for g in groups:
+        if g.count < 2:
+            continue
+        if verified_only and not g.verdict.startswith(VERDICT_IDENTICAL):
+            continue
+        candidates = g.files
+        if keep_root is not None:
+            candidates = [f for f in g.files if f.root == keep_root]
+            if not candidates:
+                continue
+        if keep == KEEP_OLDEST:
+            kept = min(candidates, key=lambda f: f.mtime)
+        elif keep == KEEP_SHORTEST:
+            kept = min(candidates, key=lambda f: (len(f.path), f.path))
+        else:
+            kept = max(candidates, key=lambda f: f.mtime)
+        out.extend(f for f in g.files if f is not kept)
+    return out
+
+
+def remove_paths(groups: list[DuplicateGroup], removed: set[str]) -> list[DuplicateGroup]:
+    """Retire les fichiers supprimés des groupes ; un groupe réduit à 1 fichier disparaît."""
+    out = []
+    for g in groups:
+        before = g.count
+        g.files = [f for f in g.files if f.path not in removed]
+        if g.count < 2:
+            continue
+        if g.count != before and not g.verdict.startswith(VERDICT_IDENTICAL):
+            g.verdict = ""                     # verdict partiel devenu obsolète
+        out.append(g)
+    return out

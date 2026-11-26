@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 import queue
-import subprocess
 import sys
 import threading
 import tkinter as tk
@@ -11,25 +10,45 @@ from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
 from . import __version__
-from .core import (DEFAULT_EXCLUDED_DIRS, DuplicateGroup, Scanner, ScanOptions,
-                   ScanStats, export_csv, filter_groups, parse_extensions, verify_group)
-from .drives import KIND_FOLDER, Drive, human_size, list_drives
+from .actions import (delete_permanently, log_deletions, move_to_trash, open_file,
+                      show_in_folder)
+from .core import (DEFAULT_EXCLUDED_DIRS, KEEP_NEWEST, KEEP_OLDEST, KEEP_SHORTEST,
+                   VERDICT_IDENTICAL, DuplicateGroup, FileEntry, Scanner, ScanOptions,
+                   ScanStats, export_csv, filter_groups, parse_extensions, remove_paths,
+                   select_copies, verify_group)
+from .drives import (KIND_FOLDER, KIND_NETWORK, KIND_REMOVABLE, Drive, human_size,
+                     list_drives)
+
+try:  # Pillow est optionnel : sans lui, l'aperçu image se limite à PNG/GIF.
+    from PIL import Image, ImageTk
+except Exception:  # noqa: BLE001
+    Image = ImageTk = None
 
 CHECK_ON, CHECK_OFF = "☑", "☐"
 MAX_ROWS = 20000          # au-delà, Tk ralentit : on affiche les plus gros groupes
 
 
-def open_location(path: str) -> None:
-    """Ouvre l'explorateur sur le fichier (sélectionné quand c'est possible)."""
+TEXT_EXT = {".txt", ".csv", ".log", ".md", ".ini", ".cfg", ".conf", ".json", ".xml",
+            ".html", ".htm", ".css", ".js", ".py", ".bat", ".ps1", ".sh", ".yml", ".yaml",
+            ".sql", ".srt", ".tex", ".c", ".h", ".cpp", ".java", ".cs", ".vb", ".reg"}
+PIL_EXT = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tif", ".tiff", ".webp", ".ico"}
+TK_EXT = {".png", ".gif", ".ppm", ".pgm"}
+PREVIEW_MAX = 280
+
+
+def _safe(action, path: str, title: str) -> None:
     try:
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", path])
-        else:
-            subprocess.Popen(["xdg-open", os.path.dirname(path)])
+        action(path)
     except OSError as e:
-        messagebox.showerror("Ouverture impossible", str(e))
+        messagebox.showerror(title, str(e))
+
+
+def open_location(path: str) -> None:
+    _safe(show_in_folder, path, "Ouverture de l'emplacement impossible")
+
+
+def open_with_default_app(path: str) -> None:
+    _safe(open_file, path, "Ouverture impossible")
 
 
 class App(ttk.Frame):
@@ -48,7 +67,7 @@ class App(ttk.Frame):
         self._drive_sig = None
 
         master.title(f"Doublons — recherche multi-disques  v{__version__}")
-        master.geometry("1150x760")
+        master.geometry("1280x800")
         master.minsize(900, 600)
         self._build()
         self.pack(fill="both", expand=True)
@@ -144,9 +163,35 @@ class App(ttk.Frame):
         self.btn_verify.pack(side="right", padx=4)
         ttk.Button(flt, text="Déplier/replier", command=self.toggle_expand).pack(side="right")
 
+        act = ttk.Frame(rbox)
+        act.pack(fill="x", pady=(0, 4))
+        ttk.Button(act, text="▶ Ouvrir", command=self._open_selected_file).pack(side="left")
+        ttk.Button(act, text="📂 Emplacement", command=self._open_selected).pack(side="left", padx=4)
+        ttk.Separator(act, orient="vertical").pack(side="left", fill="y", padx=6)
+        auto = ttk.Menubutton(act, text="Sélection auto ▾")
+        auto.pack(side="left")
+        self.auto_menu = tk.Menu(auto, tearoff=0)
+        auto["menu"] = self.auto_menu
+        self.verified_only_var = tk.BooleanVar(value=True)
+        self.auto_menu.configure(postcommand=self._build_auto_menu)
+        ttk.Button(act, text="Désélectionner", command=self._clear_selection).pack(side="left", padx=4)
+        ttk.Separator(act, orient="vertical").pack(side="left", fill="y", padx=6)
+        self.btn_delete = ttk.Button(act, text="🗑 Supprimer la sélection…", command=self.delete_selected)
+        self.btn_delete.pack(side="left")
+        self.del_mode = tk.StringVar(value="trash")
+        ttk.Radiobutton(act, text="Corbeille", value="trash", variable=self.del_mode).pack(side="left", padx=(8, 0))
+        ttk.Radiobutton(act, text="Définitive", value="perm", variable=self.del_mode).pack(side="left", padx=4)
+        self.sel_info = tk.StringVar(value="")
+        ttk.Label(act, textvariable=self.sel_info, foreground="#1f5fa8").pack(side="right")
+
         cols = ("copies", "drives", "size", "date", "verdict")
-        tf = ttk.Frame(rbox)
-        tf.pack(fill="both", expand=True)
+        pane = ttk.PanedWindow(rbox, orient="horizontal")
+        pane.pack(fill="both", expand=True)
+        tf = ttk.Frame(pane)
+        pane.add(tf, weight=3)
+        self._build_preview(pane)
+        # Largeur initiale du panneau d'aperçu une fois la fenêtre affichée.
+        self.after(300, lambda: pane.sashpos(0, max(400, pane.winfo_width() - PREVIEW_MAX - 40)))
         self.rtree = ttk.Treeview(tf, columns=cols, selectmode="extended")
         self.rtree.heading("#0", text="Nom du fichier / emplacement",
                            command=lambda: self.sort_by("name"))
@@ -155,7 +200,7 @@ class App(ttk.Frame):
         self.rtree.heading("size", text="Taille", command=lambda: self.sort_by("size"))
         self.rtree.heading("date", text="Modifié le")
         self.rtree.heading("verdict", text="Verdict", command=lambda: self.sort_by("verdict"))
-        self.rtree.column("#0", width=520)
+        self.rtree.column("#0", width=420)
         self.rtree.column("copies", width=60, anchor="center", stretch=False)
         self.rtree.column("drives", width=110, stretch=False)
         self.rtree.column("size", width=90, anchor="e", stretch=False)
@@ -173,12 +218,21 @@ class App(ttk.Frame):
         self.rtree.tag_configure("diff", foreground="#b35c00")
         self.rtree.tag_configure("same", foreground="#1a7f37")
         self.rtree.bind("<Double-1>", self._on_double)
+        self.rtree.bind("<Return>", lambda e: self._open_selected_file())
+        self.rtree.bind("<Delete>", lambda e: self.delete_selected())
+        self.rtree.bind("<<TreeviewSelect>>", self._on_select)
         self.rtree.bind("<Button-3>", self._context_menu)
         self.rtree.bind("<Button-2>", self._context_menu)
         self.menu = tk.Menu(self, tearoff=0)
+        self.menu.add_command(label="Ouvrir le fichier", command=self._open_selected_file)
         self.menu.add_command(label="Ouvrir l'emplacement", command=self._open_selected)
         self.menu.add_command(label="Copier le chemin", command=self._copy_selected)
+        self.menu.add_separator()
+        self.menu.add_command(label="Sélectionner les autres copies du groupe",
+                              command=self._select_others_in_group)
         self.menu.add_command(label="Vérifier le contenu de ce groupe", command=self.verify)
+        self.menu.add_separator()
+        self.menu.add_command(label="Supprimer la sélection…", command=self.delete_selected)
 
         self.summary = tk.StringVar()
         ttk.Label(rbox, textvariable=self.summary, foreground="gray").pack(fill="x", pady=(4, 0))
@@ -322,12 +376,14 @@ class App(ttk.Frame):
         self.busy = busy
         self.btn_scan.configure(state="disabled" if busy else "normal")
         self.btn_verify.configure(state="disabled" if busy else "normal")
+        self.btn_delete.configure(state="disabled" if busy else "normal")
         self.btn_stop.configure(state="normal" if busy else "disabled")
         if busy:
+            self.pbar.configure(mode="indeterminate")
             self.pbar.start(12)
         else:
             self.pbar.stop()
-            self.pbar["value"] = 0
+            self.pbar.configure(mode="determinate", value=0)
 
     def _poll_queue(self) -> None:
         try:
@@ -359,6 +415,8 @@ class App(ttk.Frame):
                     self._set_busy(False)
                     self.apply_filter(keep_open=True)
                     self.status.set(payload)
+                elif kind == "deleted":
+                    self._after_delete(*payload)
                 elif kind == "error":
                     self._set_busy(False)
                     messagebox.showerror("Erreur", str(payload))
@@ -439,7 +497,7 @@ class App(ttk.Frame):
         iid = self.rtree.identify_row(event.y)
         p = self._path_of(iid) if iid else None
         if p:
-            open_location(p)
+            open_with_default_app(p)
 
     def _context_menu(self, event) -> None:
         iid = self.rtree.identify_row(event.y)
@@ -449,7 +507,7 @@ class App(ttk.Frame):
             self.menu.tk_popup(event.x_root, event.y_root)
 
     def _open_selected(self) -> None:
-        for iid in self.rtree.selection():
+        for iid in list(self.rtree.selection()) or [self.rtree.focus()]:
             p = self._path_of(iid)
             if p:
                 open_location(p)
@@ -466,6 +524,270 @@ class App(ttk.Frame):
         for iid in self.rtree.selection():
             idx.add(int(iid[1:].split("f")[0]))
         return [self.shown[i] for i in sorted(idx)]
+
+    def _entry_of(self, iid: str) -> tuple[DuplicateGroup, FileEntry] | None:
+        if "f" not in iid:
+            return None
+        gi, fi = iid[1:].split("f")
+        g = self.shown[int(gi)]
+        return g, g.files[int(fi)]
+
+    def _selected_entries(self) -> list[tuple[DuplicateGroup, FileEntry]]:
+        return [e for e in (self._entry_of(i) for i in self.rtree.selection()) if e]
+
+    def _open_selected_file(self) -> None:
+        sel = self._selected_entries()
+        if not sel:
+            messagebox.showinfo("Ouvrir", "Sélectionnez un fichier (une ligne sous un nom de groupe).")
+            return
+        if len(sel) > 5 and not messagebox.askyesno("Ouvrir", f"Ouvrir {len(sel)} fichiers ?"):
+            return
+        for _, f in sel:
+            open_with_default_app(f.path)
+
+    # ------------------------------------------------------------ Aperçu
+    def _build_preview(self, pane: ttk.PanedWindow) -> None:
+        pv = ttk.LabelFrame(pane, text="Aperçu", padding=6)
+        pane.add(pv, weight=1)
+        self.pv_title = tk.StringVar(value="Sélectionnez un fichier")
+        self.pv_meta = tk.StringVar(value="")
+        ttk.Label(pv, textvariable=self.pv_title, font=("TkDefaultFont", 10, "bold"),
+                  wraplength=PREVIEW_MAX + 20).pack(fill="x")
+        ttk.Label(pv, textvariable=self.pv_meta, foreground="gray", justify="left",
+                  wraplength=PREVIEW_MAX + 20).pack(fill="x", pady=(2, 6))
+        self.pv_image = ttk.Label(pv, anchor="center")
+        self.pv_image.pack(fill="x")
+        self.pv_text = tk.Text(pv, width=40, height=14, wrap="none", font=("TkFixedFont", 9),
+                               relief="flat", background="#f6f6f6")
+        self.pv_text.configure(state="disabled")
+        b = ttk.Frame(pv)
+        b.pack(side="bottom", fill="x", pady=(6, 0))
+        ttk.Button(b, text="▶ Ouvrir", command=self._open_selected_file).pack(side="left")
+        ttk.Button(b, text="📂 Emplacement", command=self._open_selected).pack(side="left", padx=4)
+        self._pv_photo = None
+
+    def _on_select(self, _event=None) -> None:
+        sel = self._selected_entries()
+        if sel:
+            total = sum(f.size for _, f in sel)
+            self.sel_info.set(f"{len(sel)} fichier(s) sélectionné(s) · {human_size(total)}")
+        else:
+            self.sel_info.set("")
+        focus = self.rtree.focus()
+        entry = self._entry_of(focus) if focus else None
+        if entry is None and sel:
+            entry = sel[0]
+        self._show_preview(entry)
+
+    def _show_preview(self, entry) -> None:
+        self._pv_photo = None
+        self.pv_image.configure(image="", text="")
+        self.pv_text.pack_forget()
+        if entry is None:
+            self.pv_title.set("Sélectionnez un fichier")
+            self.pv_meta.set("Double-clic ou Entrée : ouvrir · Suppr : supprimer\n"
+                             "Ctrl/Maj + clic : sélection multiple")
+            return
+        g, f = entry
+        self.pv_title.set(os.path.basename(f.path))
+        self.pv_meta.set(f"{os.path.dirname(f.path)}\n{human_size(f.size)} · modifié le "
+                         f"{datetime.fromtimestamp(f.mtime):%d/%m/%Y %H:%M}\n"
+                         f"{g.count} copies · {g.verdict or 'contenu non vérifié'}")
+        ext = os.path.splitext(f.path)[1].lower()
+        if not os.path.exists(f.path):
+            self.pv_image.configure(text="Fichier introuvable (déplacé ou disque retiré ?)")
+            return
+        try:
+            if ext in PIL_EXT and Image is not None and f.size < 80 * 1024 * 1024:
+                with Image.open(f.path) as im:
+                    im.thumbnail((PREVIEW_MAX, PREVIEW_MAX))
+                    self._pv_photo = ImageTk.PhotoImage(im.copy())
+                self.pv_image.configure(image=self._pv_photo)
+                return
+            if ext in TK_EXT and f.size < 30 * 1024 * 1024:
+                img = tk.PhotoImage(file=f.path)
+                k = max(1, -(-max(img.width(), img.height()) // PREVIEW_MAX))
+                self._pv_photo = img.subsample(k, k) if k > 1 else img
+                self.pv_image.configure(image=self._pv_photo)
+                return
+            with open(f.path, "rb") as fh:
+                head = fh.read(8192)
+            if ext in TEXT_EXT or (head and b"\0" not in head):
+                enc = "utf-16" if head.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8"
+                try:
+                    txt = head.decode(enc)
+                except UnicodeDecodeError:      # texte Windows ancien (ANSI) ou coupé en plein caractère
+                    txt = head.decode("cp1252" if enc == "utf-8" else enc, errors="replace")
+                self.pv_text.configure(state="normal")
+                self.pv_text.delete("1.0", "end")
+                self.pv_text.insert("1.0", txt + ("\n…" if f.size > len(head) else ""))
+                self.pv_text.configure(state="disabled")
+                self.pv_text.pack(fill="both", expand=True)
+                return
+            self.pv_image.configure(text="Pas d'aperçu pour ce type de fichier.\n"
+                                         "Cliquez « Ouvrir » pour le lire avec\nl'application habituelle.")
+        except Exception as e:  # noqa: BLE001 — un aperçu raté ne doit rien bloquer
+            self.pv_image.configure(text=f"Aperçu impossible : {e}")
+
+    # ------------------------------------------------------- Sélection
+    def _clear_selection(self) -> None:
+        self.rtree.selection_set([])
+
+    def _select_iids(self, iids: list[str]) -> None:
+        for iid in iids:
+            self.rtree.item(iid.split("f")[0], open=True)
+        self.rtree.selection_set(iids)
+        if iids:
+            self.rtree.see(iids[0])
+
+    def _select_others_in_group(self) -> None:
+        iid = self.rtree.focus()
+        if "f" not in iid:
+            return
+        gid = iid.split("f")[0]
+        self._select_iids([c for c in self.rtree.get_children(gid) if c != iid])
+
+    def _build_auto_menu(self) -> None:
+        m = self.auto_menu
+        m.delete(0, "end")
+        m.add_command(label="Garder la copie la plus récente de chaque groupe",
+                      command=lambda: self.auto_select(KEEP_NEWEST))
+        m.add_command(label="Garder la copie la plus ancienne",
+                      command=lambda: self.auto_select(KEEP_OLDEST))
+        m.add_command(label="Garder la copie au chemin le plus court",
+                      command=lambda: self.auto_select(KEEP_SHORTEST))
+        sub = tk.Menu(m, tearoff=0)
+        for r in sorted({f.root for g in self.shown for f in g.files}):
+            sub.add_command(label=r, command=lambda r=r: self.auto_select(KEEP_NEWEST, r))
+        m.add_cascade(label="Garder la copie située sur le disque…", menu=sub)
+        m.add_separator()
+        m.add_checkbutton(label="Uniquement les groupes au contenu vérifié identique (recommandé)",
+                          variable=self.verified_only_var)
+
+    def auto_select(self, keep: str, keep_root: str | None = None) -> None:
+        verified_only = self.verified_only_var.get()
+        targets = select_copies(self.shown, keep, keep_root, verified_only)
+        if not targets:
+            if verified_only:
+                messagebox.showinfo(
+                    "Sélection auto",
+                    "Aucun groupe au contenu vérifié identique parmi les résultats affichés.\n\n"
+                    "Cliquez d'abord « Vérifier le contenu », ou décochez l'option "
+                    "« Uniquement les groupes au contenu vérifié identique » (déconseillé).")
+            else:
+                messagebox.showinfo("Sélection auto", "Aucun fichier à sélectionner.")
+            return
+        ids = {id(f) for f in targets}
+        iids = [f"g{gi}f{fi}" for gi, g in enumerate(self.shown)
+                for fi, f in enumerate(g.files) if id(f) in ids]
+        iids = [i for i in iids if self.rtree.exists(i)]
+        self._select_iids(iids)
+        self.status.set(f"{len(iids)} copie(s) sélectionnée(s) (une copie conservée par groupe). "
+                        "Vérifiez puis cliquez « Supprimer la sélection ».")
+
+    # ------------------------------------------------------- Suppression
+    def _drive_kind(self, path: str) -> str:
+        best, kind = -1, ""
+        pn = os.path.normcase(path)
+        for d in self.drives:
+            if d.kind == KIND_FOLDER:
+                continue
+            dn = os.path.normcase(d.path)
+            if pn.startswith(dn) and len(dn) > best:
+                best, kind = len(dn), d.kind
+        return kind
+
+    def delete_selected(self) -> None:
+        if self.busy:
+            return
+        sel = self._selected_entries()
+        if not sel:
+            messagebox.showinfo("Supprimer", "Sélectionnez un ou plusieurs fichiers "
+                                "(Ctrl + clic, Maj + clic, ou « Sélection auto »).")
+            return
+        mode = self.del_mode.get()
+        files = [f for _, f in sel]
+        total = sum(f.size for f in files)
+
+        # 1. Garde-fou : toutes les copies d'un même groupe sélectionnées ?
+        per_group: dict[int, list[FileEntry]] = {}
+        for g, f in sel:
+            per_group.setdefault(id(g), []).append(f)
+        groups_by_id = {id(g): g for g, _ in sel}
+        wiped = [groups_by_id[k].name for k, v in per_group.items() if len(v) == groups_by_id[k].count]
+        if wiped:
+            names = "\n".join("  • " + n for n in wiped[:10]) + ("\n  …" if len(wiped) > 10 else "")
+            if not messagebox.askyesno(
+                    "⚠ Toutes les copies sélectionnées", icon="warning", default="no",
+                    message=f"Pour {len(wiped)} fichier(s), TOUTES les copies sont sélectionnées :\n"
+                            f"{names}\n\nIl n'en restera AUCUN exemplaire. Continuer quand même ?"):
+                return
+
+        # 2. Avertissements
+        notes = []
+        unverified = sum(1 for g, _ in sel if not g.verdict.startswith(VERDICT_IDENTICAL))
+        if unverified:
+            notes.append(f"⚠ {unverified} fichier(s) appartiennent à des groupes dont le contenu "
+                         "n'a PAS été vérifié identique : ce sont peut-être des fichiers différents "
+                         "portant le même nom.")
+        if mode == "trash" and sys.platform == "win32":
+            no_bin = sum(1 for f in files if self._drive_kind(f.path) in (KIND_REMOVABLE, KIND_NETWORK))
+            if no_bin:
+                notes.append(f"⚠ {no_bin} fichier(s) sont sur une clé USB, carte SD ou un lecteur réseau : "
+                             "Windows n'y a pas de Corbeille, ils seront supprimés DÉFINITIVEMENT.")
+        if mode == "perm":
+            notes.append("⚠ Suppression DÉFINITIVE : aucune récupération possible depuis la Corbeille.")
+        listing = "\n".join("  " + f.path for f in files[:8]) + (
+            f"\n  … et {len(files) - 8} autre(s)" if len(files) > 8 else "")
+        what = "Mettre à la corbeille" if mode == "trash" else "Supprimer définitivement"
+        msg = f"{what} {len(files)} fichier(s) ({human_size(total)}) ?\n\n{listing}"
+        if notes:
+            msg += "\n\n" + "\n\n".join(notes)
+        if not messagebox.askyesno("Confirmer la suppression", msg, icon="warning", default="no"):
+            return
+
+        # 3. Exécution en arrière-plan (les clés USB peuvent être lentes)
+        self._set_busy(True)
+        self.status.set(f"Suppression de {len(files)} fichier(s)…")
+        action = move_to_trash if mode == "trash" else delete_permanently
+        label = "corbeille" if mode == "trash" else "définitive"
+
+        def work():
+            done, failed, log = [], [], []
+            for f in files:
+                try:
+                    action(f.path)
+                    done.append(f)
+                    log.append((f.path, f.size, label, "OK"))
+                except OSError as e:
+                    failed.append((f.path, str(e)))
+                    log.append((f.path, f.size, label, f"ÉCHEC : {e}"))
+            try:
+                log_file = log_deletions(log)
+            except OSError:
+                log_file = ""
+            self.q.put(("deleted", (done, failed, log_file)))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _after_delete(self, done: list[FileEntry], failed: list[tuple[str, str]], log_file: str) -> None:
+        self._set_busy(False)
+        removed = {f.path for f in done}
+        self.groups = remove_paths(self.groups, removed)
+        self.apply_filter(keep_open=True)
+        self._on_select()
+        freed = sum(f.size for f in done)
+        msg = f"{len(done)} fichier(s) supprimé(s), {human_size(freed)} libérés."
+        if failed:
+            msg += f"  {len(failed)} échec(s)."
+        if log_file:
+            msg += f"  Journal : {log_file}"
+        self.status.set(msg)
+        if failed:
+            details = "\n".join(f"{p}\n    → {e}" for p, e in failed[:10])
+            messagebox.showwarning("Certains fichiers n'ont pas pu être supprimés",
+                                   details + ("\n…" if len(failed) > 10 else "") +
+                                   "\n\n(fichier ouvert dans une autre application, protégé en "
+                                   "écriture, ou disque retiré)")
 
     def verify(self) -> None:
         if self.busy:

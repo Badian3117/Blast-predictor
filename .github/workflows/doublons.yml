@@ -48,7 +48,7 @@ jobs:
           python-version: "3.12"
       - name: Build exe
         run: |
-          pip install pyinstaller==6.11.1
+          pip install pyinstaller==6.11.1 pillow==11.0.0
           pyinstaller --onefile --windowed --name Doublons Doublons.pyw
       - name: Check exe
         shell: pwsh
